@@ -1,0 +1,110 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { REVIEW_VERDICTS_STORAGE_KEY } from './review-verdict';
+import {
+	mergeReviewChanges,
+	createReviewVerdictStore,
+	type ReviewVerdictStorage
+} from './review-verdict-store';
+
+class MemoryStorage implements ReviewVerdictStorage {
+	private values = new Map<string, string>();
+
+	getItem(key: string): string | null {
+		return this.values.get(key) ?? null;
+	}
+
+	setItem(key: string, value: string): void {
+		this.values.set(key, value);
+	}
+}
+
+type PersistedVerdicts = Record<string, Record<string, { verdict: string; at?: string }>>;
+
+function persisted(storage: ReviewVerdictStorage): PersistedVerdicts {
+	return JSON.parse(storage.getItem(REVIEW_VERDICTS_STORAGE_KEY) ?? '{}') as PersistedVerdicts;
+}
+
+describe('createReviewVerdictStore', () => {
+	it('merges writes from independently cached stores in the same job', () => {
+		const storage = new MemoryStorage();
+		const storeA = createReviewVerdictStore(storage, () => '2026-07-14T10:00:00.000Z');
+		const storeB = createReviewVerdictStore(storage, () => '2026-07-14T10:01:00.000Z');
+		storeA.getSnapshot();
+		storeB.getSnapshot();
+
+		storeA.setVerdict('job-1', 'issue-a', { verdict: 'pass' });
+		storeB.setVerdict('job-1', 'issue-b', { verdict: 'fail' });
+
+		expect(persisted(storage)['job-1']).toEqual({
+			'issue-a': { verdict: 'pass', at: '2026-07-14T10:00:00.000Z' },
+			'issue-b': { verdict: 'fail', at: '2026-07-14T10:01:00.000Z' }
+		});
+	});
+
+	it('preserves other jobs and fresh decisions while clearing', () => {
+		const storage = new MemoryStorage();
+		const storeA = createReviewVerdictStore(storage);
+		const storeB = createReviewVerdictStore(storage);
+		storeA.getSnapshot();
+		storeB.getSnapshot();
+
+		storeA.setVerdict('job-a', 'issue-a', { verdict: 'pass' });
+		storeB.setVerdict('job-b', 'issue-b', { verdict: 'fail' });
+		storeA.clearVerdict('job-a', 'issue-a');
+
+		// Asserted field-by-field rather than with expect.objectContaining, whose
+		// `any` return would defeat the typed persisted() helper.
+		const remaining = persisted(storage);
+		expect(Object.keys(remaining)).toEqual(['job-b']);
+		expect(remaining['job-b']?.['issue-b']?.verdict).toBe('fail');
+	});
+
+	it('refreshes cached subscribers from a storage event value', () => {
+		const storage = new MemoryStorage();
+		const store = createReviewVerdictStore(storage);
+		const listener = vi.fn();
+		store.getSnapshot();
+		store.subscribe(listener);
+
+		store.sync(
+			JSON.stringify({
+				'job-1': {
+					'issue-1': { verdict: 'pass', at: '2026-07-14T10:00:00.000Z' }
+				}
+			})
+		);
+
+		expect(listener).toHaveBeenCalledOnce();
+		expect(store.getSnapshot()['job-1']?.['issue-1']?.verdict).toBe('pass');
+	});
+
+	it('refreshes from the latest persisted value instead of a stale event payload', () => {
+		const storage = new MemoryStorage();
+		const storeA = createReviewVerdictStore(storage);
+		const storeB = createReviewVerdictStore(storage);
+		storeA.setVerdict('job-1', 'issue-a', { verdict: 'pass' });
+		const staleEventValue = storage.getItem(REVIEW_VERDICTS_STORAGE_KEY);
+		storeB.setVerdict('job-1', 'issue-b', { verdict: 'fail' });
+
+		storeB.refresh();
+
+		expect(staleEventValue).not.toBe(storage.getItem(REVIEW_VERDICTS_STORAGE_KEY));
+		expect(Object.keys(storeB.getSnapshot()['job-1'] ?? {})).toEqual(['issue-a', 'issue-b']);
+	});
+});
+
+describe('project review rebasing', () => {
+	it('keeps another tab notes while applying this tab edits and removals', () => {
+		const previous = {
+			job: { first: { note: 'old', at: 'before' }, removed: { note: 'remove', at: 'before' } }
+		};
+		const fresh = {
+			job: { ...previous.job, second: { note: 'written in another tab', at: 'later' } }
+		};
+		const next = { job: { first: { note: 'new', at: 'now' } } };
+		expect(mergeReviewChanges(fresh, previous, next)).toEqual({
+			job: { first: next.job.first, second: fresh.job.second }
+		});
+	});
+});

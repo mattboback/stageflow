@@ -1,0 +1,822 @@
+package api
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/mattboback/stageflow/libs/go/httputil"
+)
+
+type flusherRecorder struct {
+	*httptest.ResponseRecorder
+	flushed bool
+}
+
+func (f *flusherRecorder) Flush() {
+	f.flushed = true
+}
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	readDeadline time.Time
+}
+
+func (r *deadlineRecorder) SetReadDeadline(deadline time.Time) error {
+	r.readDeadline = deadline
+
+	return nil
+}
+
+func TestRequestReadDeadlineMiddlewareExtendsUploadDeadline(t *testing.T) {
+	t.Parallel()
+
+	started := time.Now()
+	called := false
+	recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	handler := requestReadDeadlineMiddleware(uploadRequestTimeout, func(http.ResponseWriter, *http.Request) {
+		called = true
+	})
+
+	handler(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", http.NoBody))
+
+	if !called {
+		t.Fatal("wrapped upload handler was not called")
+	}
+
+	minimum := started.Add(uploadRequestTimeout)
+	maximum := time.Now().Add(uploadRequestTimeout)
+
+	if recorder.readDeadline.Before(minimum) || recorder.readDeadline.After(maximum) {
+		t.Fatalf(
+			"read deadline = %v, want between %v and %v",
+			recorder.readDeadline,
+			minimum,
+			maximum,
+		)
+	}
+}
+
+func TestRouterExtendsReadDeadlineOnlyForZIPUploads(t *testing.T) {
+	server, _, _ := newTestServer(t)
+	router := server.Router()
+
+	zipRecorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	router.ServeHTTP(
+		zipRecorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", http.NoBody),
+	)
+
+	if zipRecorder.readDeadline.IsZero() {
+		t.Fatal("ZIP route did not extend its request read deadline")
+	}
+
+	urlRecorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	router.ServeHTTP(
+		urlRecorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody),
+	)
+
+	if !urlRecorder.readDeadline.IsZero() {
+		t.Fatalf("non-upload route changed its read deadline to %v", urlRecorder.readDeadline)
+	}
+}
+
+func TestCORSMiddleware(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://example.com")
+
+	handler := corsMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req.Header.Set("Origin", "https://example.com")
+
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	// Check CORS headers
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "https://example.com" {
+		t.Errorf("Expected Access-Control-Allow-Origin to echo origin, got %q", got)
+	}
+
+	if rr.Header().Get("Access-Control-Allow-Methods") != "GET, POST, PATCH, DELETE, OPTIONS" {
+		t.Error("Expected Access-Control-Allow-Methods header")
+	}
+
+	if rr.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization, X-Api-Key" {
+		t.Error("Expected Access-Control-Allow-Headers header")
+	}
+
+	if rr.Header().Get("Vary") != "Origin" {
+		t.Error("Expected Vary header to include Origin")
+	}
+}
+
+func TestCORSMiddleware_NoConfiguredOrigins(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "")
+
+	handler := corsMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req.Header.Set("Origin", "https://example.com")
+
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected no Access-Control-Allow-Origin header, got %q", got)
+	}
+}
+
+func TestCORSMiddlewareOptions(t *testing.T) {
+	handler := corsMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodOptions, "/test", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for OPTIONS, got %d", rr.Code)
+	}
+}
+
+func TestLoggingMiddleware(t *testing.T) {
+	handler := loggingMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rr.Code)
+	}
+}
+
+func TestLoggingResponseWriter(t *testing.T) {
+	rr := httptest.NewRecorder()
+	lrw := &loggingResponseWriter{
+		ResponseWriter: rr,
+		statusCode:     http.StatusOK,
+	}
+
+	lrw.WriteHeader(http.StatusNotFound)
+
+	if lrw.statusCode != http.StatusNotFound {
+		t.Errorf("Expected status code 404, got %d", lrw.statusCode)
+	}
+}
+
+func TestLoggingResponseWriter_ImplementsFlusher(t *testing.T) {
+	rr := &flusherRecorder{ResponseRecorder: httptest.NewRecorder()}
+	lrw := &loggingResponseWriter{
+		ResponseWriter: rr,
+		statusCode:     http.StatusOK,
+	}
+
+	flusher, ok := any(lrw).(http.Flusher)
+	if !ok {
+		t.Fatalf("expected loggingResponseWriter to implement http.Flusher")
+	}
+
+	flusher.Flush()
+
+	if !rr.flushed {
+		t.Fatalf("expected Flush() to be forwarded to underlying ResponseWriter")
+	}
+}
+
+func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+
+	t.Cleanup(func() {
+		apiRateLimiter = original
+
+		resetTrustedProxiesForTest()
+	})
+
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "")
+	resetTrustedProxiesForTest()
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// First request from RemoteAddr fills the bucket.
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "10.0.0.1:1234"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+
+	rr1 := httptest.NewRecorder()
+
+	handler(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", rr1.Code)
+	}
+
+	// Second request tries to escape the bucket via a spoofed XFF header.
+	// Because 10.0.0.1 is not trusted, XFF must be ignored and the key
+	// must remain 10.0.0.1.
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "10.0.0.1:1234"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+
+	rr2 := httptest.NewRecorder()
+
+	handler(rr2, req2)
+
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request with spoofed XFF: expected 429, got %d", rr2.Code)
+	}
+}
+
+func TestRateLimitKey_DefaultLoopbackProxyUsesForwardedClient(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
+	first.RemoteAddr = "127.0.0.1:41001"
+	first.Header.Set("X-Forwarded-For", "198.51.100.10")
+
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
+	second.RemoteAddr = "127.0.0.1:41002"
+	second.Header.Set("X-Forwarded-For", "198.51.100.11")
+
+	if firstKey, secondKey := rateLimitKey(first), rateLimitKey(second); firstKey != "198.51.100.10" ||
+		secondKey != "198.51.100.11" {
+		t.Fatalf("loopback proxy keys = %q, %q", firstKey, secondKey)
+	}
+}
+
+func TestRateLimitKey_TrustedProxyRejectsSpoofedLeftmostForwardingValue(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
+	req.RemoteAddr = "10.0.0.1:41001"
+	req.Header.Set("X-Forwarded-For", "192.0.2.200, 203.0.113.25")
+
+	if got := rateLimitKey(req); got != "203.0.113.25" {
+		t.Fatalf("rate-limit key = %q, want rightmost untrusted client", got)
+	}
+}
+
+func TestRateLimitKey_InvalidForwardingChainFallsBackToProxy(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
+	req.RemoteAddr = "10.0.0.1:41001"
+	req.Header.Set("X-Forwarded-For", "not-an-ip")
+
+	if got := rateLimitKey(req); got != "10.0.0.1" {
+		t.Fatalf("rate-limit key = %q, want immediate proxy fallback", got)
+	}
+}
+
+func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+
+	t.Cleanup(func() {
+		apiRateLimiter = original
+
+		resetTrustedProxiesForTest()
+	})
+
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Two requests from different upstream IPs via a trusted proxy should
+	// each get their own bucket.
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "10.0.0.1:1234"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+
+	rr1 := httptest.NewRecorder()
+
+	handler(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", rr1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "10.0.0.1:1234"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+
+	rr2 := httptest.NewRecorder()
+
+	handler(rr2, req2)
+
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("second request with distinct trusted XFF: expected 200, got %d", rr2.Code)
+	}
+}
+
+func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+
+	t.Cleanup(func() {
+		apiRateLimiter = original
+	})
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "127.0.0.1:1234"
+	rr1 := httptest.NewRecorder()
+	handler(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("expected first request 200, got %d", rr1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "127.0.0.1:1234"
+	rr2 := httptest.NewRecorder()
+	handler(rr2, req2)
+
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second request 429, got %d", rr2.Code)
+	}
+}
+
+func TestClientTokenBucketLimiterEnforcesBurstAndRefill(t *testing.T) {
+	limiter := newClientTokenBucketLimiter(6, 3)
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+
+	for i := range 3 {
+		if allowed, retryAfter := limiter.allow("client-a", now); !allowed || retryAfter != 0 {
+			t.Fatalf("burst request %d = (%v, %d), want (true, 0)", i+1, allowed, retryAfter)
+		}
+	}
+
+	if allowed, retryAfter := limiter.allow("client-a", now); allowed || retryAfter != 10 {
+		t.Fatalf("request past burst = (%v, %d), want (false, 10)", allowed, retryAfter)
+	}
+
+	if allowed, retryAfter := limiter.allow("client-a", now.Add(10*time.Second)); !allowed || retryAfter != 0 {
+		t.Fatalf("request after one-token refill = (%v, %d), want (true, 0)", allowed, retryAfter)
+	}
+
+	if allowed, _ := limiter.allow("client-b", now); !allowed {
+		t.Fatal("expected a different client to have an independent burst")
+	}
+}
+
+func TestPublicSubmissionRateLimiterLoadsConfig(t *testing.T) {
+	t.Setenv(publicSubmissionRateEnv, "12")
+	t.Setenv(publicSubmissionBurstEnv, "4")
+
+	limiter := newPublicSubmissionRateLimiterFromEnv()
+	if limiter.requestsPerMinute != 12 {
+		t.Fatalf("requestsPerMinute = %v, want 12", limiter.requestsPerMinute)
+	}
+
+	if limiter.burst != 4 {
+		t.Fatalf("burst = %v, want 4", limiter.burst)
+	}
+}
+
+func TestPublicSubmissionRateLimitMiddlewareReturnsRetryAfter(t *testing.T) {
+	limiter := newClientTokenBucketLimiter(6, 1)
+	handler := publicSubmissionRateLimitMiddleware(limiter, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
+	first.RemoteAddr = "127.0.0.1:1234"
+	firstResponse := httptest.NewRecorder()
+	handler(firstResponse, first)
+
+	if firstResponse.Code != http.StatusCreated {
+		t.Fatalf("first request: expected 201, got %d", firstResponse.Code)
+	}
+
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/discover", http.NoBody)
+	second.RemoteAddr = "127.0.0.1:5678"
+	secondResponse := httptest.NewRecorder()
+	handler(secondResponse, second)
+
+	if secondResponse.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request: expected 429, got %d", secondResponse.Code)
+	}
+
+	if got := secondResponse.Header().Get("Retry-After"); got == "" {
+		t.Fatal("expected Retry-After header")
+	}
+
+	var response httputil.ErrorResponse
+	if err := json.NewDecoder(secondResponse.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response.Error.Code != httputil.ErrCodeRateLimitExceeded {
+		t.Fatalf("error code = %q, want %q", response.Error.Code, httputil.ErrCodeRateLimitExceeded)
+	}
+
+	if response.Error.Meta["burst"] != "1" {
+		t.Fatalf("burst metadata = %q, want 1", response.Error.Meta["burst"])
+	}
+}
+
+func TestValidateCORSConfig_WildcardFails(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,*")
+
+	if err := ValidateCORSConfig(); err == nil {
+		t.Fatal("expected error for wildcard CORS")
+	}
+}
+
+func TestValidateCORSConfig_ExplicitOriginsOK(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,https://www.stageflow.org")
+
+	if err := ValidateCORSConfig(); err != nil {
+		t.Fatalf("expected no error for explicit origins, got %v", err)
+	}
+}
+
+func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
+	limiter := newInMemoryRateLimiter(100)
+	now := time.Now().UTC()
+
+	// Fill the window table to capacity with distinct, in-window keys.
+	for i := range rateLimiterMaxEntries {
+		allowed, _ := limiter.allow("filler-"+strconv.Itoa(i), now)
+		if !allowed {
+			t.Fatalf("filler %d should be allowed while filling the table", i)
+		}
+	}
+
+	// A brand-new key must now be DENIED (fail closed), not silently allowed.
+	allowed, retryAfter := limiter.allow("new-client", now)
+	if allowed {
+		t.Fatal("expected new client to be denied when the table is saturated (fail closed)")
+	}
+
+	if retryAfter < 1 {
+		t.Fatalf("expected a positive Retry-After on saturation, got %d", retryAfter)
+	}
+
+	if limiter.saturation.count == 0 {
+		t.Fatal("expected the saturation counter to be incremented on a fail-closed denial")
+	}
+
+	// An already-tracked key must keep being served from its existing window,
+	// so saturation never starves established legitimate clients.
+	if ok, _ := limiter.allow("filler-0", now); !ok {
+		t.Fatal("expected an already-tracked key to remain allowed under saturation")
+	}
+}
+
+func TestRateLimiter_ExpiredWindowIsResetForReturningKey(t *testing.T) {
+	// The throttled sweep is only safe because a returning key has its expired
+	// window reset inline, independent of eviction. Without that, throttling the
+	// sweep would let a stale count deny a legitimate client.
+	limiter := newInMemoryRateLimiter(1)
+	start := time.Now().UTC()
+
+	if ok, _ := limiter.allow("client", start); !ok {
+		t.Fatal("first request should be allowed")
+	}
+
+	if ok, _ := limiter.allow("client", start); ok {
+		t.Fatal("second request in the same window should be denied at limit 1")
+	}
+
+	if ok, _ := limiter.allow("client", start.Add(rateLimitWindow+time.Second)); !ok {
+		t.Fatal("expected the window to reset for a returning key after it expired")
+	}
+}
+
+// mustAllow fails the test if a request is denied, so the sweep assertions below
+// read as statements about eviction rather than about rate limiting.
+func mustAllow(t *testing.T, limiter *inMemoryRateLimiter, key string, at time.Time) {
+	t.Helper()
+
+	if allowed, _ := limiter.allow(key, at); !allowed {
+		t.Fatalf("request for %q at %v should have been allowed", key, at)
+	}
+}
+
+func TestRateLimiter_SweepIsThrottledToOncePerWindow(t *testing.T) {
+	limiter := newInMemoryRateLimiter(100)
+	t0 := time.Now().UTC()
+
+	// The first call sweeps unconditionally and anchors the throttle at t0.
+	mustAllow(t, limiter, "anchor", t0)
+
+	// Tracked mid-window, so this one expires *between* scheduled sweeps rather
+	// than on one -- which is the only way to observe the throttle at all, since
+	// the staleness threshold and the sweep interval are both rateLimitWindow.
+	mustAllow(t, limiter, "midwindow", t0.Add(30*time.Second))
+
+	// t0+61s: a sweep is due. "anchor" is 61s old and goes; "midwindow" is 31s old
+	// and stays.
+	mustAllow(t, limiter, "trigger", t0.Add(rateLimitWindow+time.Second))
+
+	if _, exists := limiter.windows["anchor"]; exists {
+		t.Fatal("expected the expired anchor window to be swept")
+	}
+
+	if _, exists := limiter.windows["midwindow"]; !exists {
+		t.Fatal("expected the still-live midwindow entry to survive the sweep")
+	}
+
+	// t0+95s: "midwindow" is now 65s old, so it is expired -- but the last sweep ran
+	// at t0+61s, so the throttle must suppress this one. An unthrottled sweep walks
+	// the whole table here, which is the per-request O(n) cost being removed.
+	mustAllow(t, limiter, "probe", t0.Add(95*time.Second))
+
+	if _, exists := limiter.windows["midwindow"]; !exists {
+		t.Fatal("expected an expired entry to persist until the next scheduled sweep")
+	}
+
+	// t0+125s: the next sweep is due, and reclaims it.
+	mustAllow(t, limiter, "final", t0.Add(125*time.Second))
+
+	if _, exists := limiter.windows["midwindow"]; exists {
+		t.Fatal("expected the expired entry to be reclaimed once a sweep was due again")
+	}
+}
+
+func TestClientTokenBucketLimiter_SweepIsThrottledToOncePerWindow(t *testing.T) {
+	// burst/rate is 3/6 of a minute, floored to one minute, so staleAfter equals
+	// rateLimitWindow and the same between-sweeps window applies.
+	limiter := newClientTokenBucketLimiter(6, 3)
+	t0 := time.Now().UTC()
+
+	if allowed, _ := limiter.allow("anchor", t0); !allowed {
+		t.Fatal("anchor should be allowed")
+	}
+
+	if allowed, _ := limiter.allow("midwindow", t0.Add(30*time.Second)); !allowed {
+		t.Fatal("midwindow should be allowed")
+	}
+
+	if allowed, _ := limiter.allow("trigger", t0.Add(rateLimitWindow+time.Second)); !allowed {
+		t.Fatal("trigger should be allowed")
+	}
+
+	if _, exists := limiter.buckets["anchor"]; exists {
+		t.Fatal("expected the recovered anchor bucket to be swept")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; !exists {
+		t.Fatal("expected the not-yet-recovered midwindow bucket to survive")
+	}
+
+	if allowed, _ := limiter.allow("probe", t0.Add(95*time.Second)); !allowed {
+		t.Fatal("probe should be allowed")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; !exists {
+		t.Fatal("expected a recovered bucket to persist until the next scheduled sweep")
+	}
+
+	if allowed, _ := limiter.allow("final", t0.Add(125*time.Second)); !allowed {
+		t.Fatal("final should be allowed")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; exists {
+		t.Fatal("expected the recovered bucket to be reclaimed once a sweep was due again")
+	}
+}
+
+// syncBuffer collects log output written from another goroutine. bytes.Buffer is
+// not safe for concurrent use, and the drain this test exercises logs from a
+// background goroutine while the test reads.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.String()
+}
+
+func TestTimeoutMiddleware_LogsPanicRaisedAfterTheDeadline(t *testing.T) {
+	// A handler that outran its deadline and then panicked used to vanish entirely:
+	// runTimedHandler recovered it and sent it on a channel nobody read again.
+	// Assert it is logged, and that recovering it does not take the process down.
+	logs := &syncBuffer{}
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelError})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	panicked := make(chan struct{})
+	handler := timeoutMiddleware(20*time.Millisecond, func(_ http.ResponseWriter, _ *http.Request) {
+		defer close(panicked)
+
+		time.Sleep(80 * time.Millisecond)
+
+		panic("late boom")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/slow", http.NoBody)
+	rr := httptest.NewRecorder()
+	handler(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 once the deadline elapsed, got %d", rr.Code)
+	}
+
+	<-panicked
+
+	// The drain goroutine logs after receiving from the channel, so poll briefly.
+	deadline := time.Now().Add(2 * time.Second)
+	for !strings.Contains(logs.String(), "late boom") && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	logged := logs.String()
+	if !strings.Contains(logged, "late boom") {
+		t.Fatalf("expected the post-deadline panic to be logged, got: %q", logged)
+	}
+
+	if !strings.Contains(logged, "after its deadline") {
+		t.Fatalf("expected the log line to identify it as post-deadline, got: %q", logged)
+	}
+}
+
+func TestTimeoutMiddleware_AllowsFastHandler(t *testing.T) {
+	handler := timeoutMiddleware(50*time.Millisecond, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		if _, err := w.Write([]byte(`{"ok":true}`)); err != nil {
+			t.Errorf("write response: %v", err)
+		}
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected %d, got %d", http.StatusCreated, rr.Code)
+	}
+
+	if got := rr.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected Content-Type application/json, got %q", got)
+	}
+}
+
+func TestTimeoutMiddleware_TimesOutAndIgnoresLateWrites(t *testing.T) {
+	lateWriteDone := make(chan struct{})
+
+	handler := timeoutMiddleware(10*time.Millisecond, func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+
+		// Write after timeout - expected to fail with timeout error
+		_, _ = w.Write([]byte("late"))
+
+		close(lateWriteDone)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected %d, got %d", http.StatusServiceUnavailable, rr.Code)
+	}
+
+	if got := rr.Body.String(); strings.Contains(got, "late") {
+		t.Fatalf("expected late writes to be ignored, got body %q", got)
+	}
+
+	if got := rr.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected a JSON timeout response, got Content-Type %q", got)
+	}
+
+	if !strings.Contains(rr.Body.String(), "REQUEST_TIMEOUT") {
+		t.Fatalf("expected the timeout body, got %q", rr.Body.String())
+	}
+
+	select {
+	case <-lateWriteDone:
+		// ok
+	case <-time.After(250 * time.Millisecond):
+		t.Fatalf("expected handler goroutine to finish")
+	}
+}
+
+func TestTimeoutMiddleware_KeepsHandlerContentTypeOn503(t *testing.T) {
+	handler := timeoutMiddleware(time.Second, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+
+	rr := httptest.NewRecorder()
+	handler(rr, httptest.NewRequest(http.MethodGet, "/busy", http.NoBody))
+
+	if got := rr.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("handler Content-Type was replaced: %q", got)
+	}
+}
+
+func TestTimeoutMiddleware_RepanicsOnServingGoroutine(t *testing.T) {
+	t.Parallel()
+
+	sentinel := errors.New("handler exploded")
+	handler := timeoutMiddleware(time.Second, func(http.ResponseWriter, *http.Request) {
+		panic(sentinel)
+	})
+
+	defer func() {
+		recovered := recover()
+		if !errors.Is(asError(recovered), sentinel) {
+			t.Fatalf("recovered panic = %v, want %v", recovered, sentinel)
+		}
+	}()
+
+	handler(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/panic", http.NoBody))
+}
+
+func asError(value any) error {
+	err, _ := value.(error)
+
+	return err
+}
+
+func TestIdentifyAPIKeyCaller(t *testing.T) {
+	tests := []struct {
+		name, configured, header, value string
+		want                            bool
+	}{
+		{name: "no token configured", header: "X-Api-Key", value: "anything"},
+		{name: "missing key", configured: "secret"},
+		{name: "wrong key", configured: "secret", header: "X-Api-Key", value: "wrong"},
+		{name: "matching key", configured: "secret", header: "X-Api-Key", value: "secret", want: true},
+		{name: "matching bearer", configured: "secret", header: "Authorization", value: "Bearer secret", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := &Server{config: &ServerConfig{APIToken: tt.configured}}
+			handler := server.identifyAPIKeyCaller(func(w http.ResponseWriter, r *http.Request) {
+				if got := isAPIKeyCaller(r.Context()); got != tt.want {
+					t.Errorf("matched=%v, want %v", got, tt.want)
+				}
+
+				w.WriteHeader(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+			if tt.header != "" {
+				req.Header.Set(tt.header, tt.value)
+			}
+
+			rr := httptest.NewRecorder()
+			handler(rr, req)
+
+			if rr.Code != http.StatusOK {
+				t.Fatalf("public handler status=%d, want 200", rr.Code)
+			}
+		})
+	}
+}

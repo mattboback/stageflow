@@ -1,0 +1,61 @@
+{
+	"id": "axe",
+	"name": "Axe Accessibility Scanner",
+	"version": "1.0.0",
+	"description": "WCAG accessibility testing using axe-core engine. Detects accessibility violations and provides remediation guidance.",
+	"aliases": ["accessibility", "a11y", "wcag", "keyboard", "keyboard-nav"],
+	"author": "Stageflow",
+	"license": "MIT",
+	"homepage": "https://github.com/dequelabs/axe-core",
+	"capabilities": {
+		"categories": ["accessibility"],
+		"outputFormats": ["json", "html"],
+		"supportsScreenshots": true,
+		"supportsConcurrency": true,
+		"requiresBrowser": true,
+		"supportsOffline": true,
+		"maxConcurrency": 4,
+		"estimatedTimePerPage": 5000
+	},
+	"requirements": {
+		"browser": {
+			"type": "chromium",
+			"headless": true
+		},
+		"resources": {
+			"maxMemoryMB": 3072,
+			"cpus": 2
+		}
+	},
+	"entry": {
+		"module": "./index.js",
+		"exportName": "AxeScanner"
+	},
+	"configSchema": {
+		"type": "object",
+		"description": "Only the options below affect analysis. Unrecognized historical settings are accepted but ignored.",
+		"additionalProperties": true,
+		"properties": {
+			"disabledRules": {
+				"type": "array",
+				"items": { "type": "string" },
+				"description": "Specific axe rules to disable (empty = no disabled rules)"
+			},
+			"runOnlyTags": {
+				"type": "array",
+				"items": { "type": "string" },
+				"description": "Limit analysis to rules with these axe tags (empty = all rules)"
+			},
+			"dynamicContentWaitMs": {
+				"type": "number",
+				"minimum": 0,
+				"default": 50,
+				"description": "Milliseconds to wait for dynamic content before analysis (0 skips the wait)"
+			}
+		}
+	},
+	"output": {
+		"categoryPrefix": "a11y",
+		"includeRawResults": false
+	}
+}

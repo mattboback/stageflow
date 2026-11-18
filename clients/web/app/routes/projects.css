@@ -1,0 +1,315 @@
+.projects-page {
+	padding-block: clamp(2rem, 5vw, 4rem);
+}
+
+.projects-page__wrap {
+	display: grid;
+	gap: var(--sp-6);
+}
+
+/* page head: shared .page-head from instrument.css */
+
+/* Level with the top of the intro rather than its last line, where .page-head
+   puts it: the note is about the whole page, not the lede beside it. */
+.projects-local-note {
+	align-self: center;
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	max-width: 27rem;
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px solid var(--signal-edge);
+	border-radius: var(--r-sm);
+	background: var(--signal-wash);
+	color: var(--ink-muted);
+	font-size: var(--fs-4);
+}
+
+.projects-local-note svg {
+	color: var(--signal-ink);
+	flex: 0 0 auto;
+}
+
+/* List in the wide column, create form in the rail -- matching the source order,
+   which puts the projects first. */
+.projects-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+	gap: var(--sp-6);
+	align-items: start;
+}
+
+.project-create__form {
+	display: grid;
+	gap: var(--sp-4);
+}
+
+.project-create__form .btn {
+	justify-self: start;
+}
+
+.project-create__error {
+	color: var(--sev-critical);
+	font-size: var(--fs-4);
+}
+
+/* Like .projects-grid below 1080px: one column that can shrink below the
+   cards' unbroken URLs, so they truncate instead of widening the page. */
+.project-list,
+.project-cards {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.project-list {
+	gap: var(--sp-4);
+}
+
+.project-list__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-3);
+	border-bottom: 1px solid var(--line);
+	padding-bottom: var(--sp-3);
+}
+
+.project-import {
+	margin-left: auto;
+}
+
+.project-list__head h2 {
+	font-size: var(--fs-7);
+}
+
+.project-list .blankslate .btn {
+	margin-top: var(--sp-2);
+}
+
+.project-cards {
+	gap: var(--sp-3);
+}
+
+.project-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-4);
+	padding: var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+}
+
+.project-card__body {
+	min-width: 0;
+	flex: 1;
+}
+.project-card__stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-1) var(--sp-3);
+	margin-top: var(--sp-2);
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+}
+.project-card__stats span {
+	white-space: nowrap;
+}
+
+.project-card h3 {
+	font-size: var(--fs-6);
+}
+
+.project-card__url {
+	color: var(--signal-ink);
+	font-size: var(--fs-3);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	margin-top: var(--sp-1);
+}
+
+.project-card__meta {
+	color: var(--ink-muted);
+	font-size: var(--fs-3);
+	margin-top: var(--sp-2);
+}
+
+/* The score line, then what it ends on: the latest score against the baseline. */
+.project-card__trend {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-3);
+	margin-top: var(--sp-2);
+}
+
+.project-card__trend > div {
+	min-width: 0;
+}
+
+.project-card__trend .project-card__meta {
+	margin-top: 0;
+}
+
+.project-card__band {
+	display: inline-block;
+	margin-left: 0.5rem;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	font-size: var(--fs-1);
+	font-weight: 700;
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	vertical-align: middle;
+}
+.project-card__band--strong { color: var(--sev-pass-ink-strong); background: var(--sev-pass-wash); }
+.project-card__band--failing, .project-card__band--high-risk { color: var(--sev-critical); background: var(--sev-critical-wash); }
+.project-card__severities {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0.35rem 0 0;
+}
+.project-card__sev {
+	font-size: var(--fs-1);
+	font-weight: 600;
+	padding: 0.12rem 0.5rem;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
+.project-card__score {
+	color: var(--ink-muted);
+	font-size: var(--fs-3);
+}
+
+.project-card__score strong {
+	color: var(--ink-strong);
+	font-size: var(--fs-5);
+}
+
+/* The change and what it is against wrap as one piece. */
+.project-card__vs {
+	white-space: nowrap;
+}
+
+.project-card__score + .project-card__meta {
+	margin-top: var(--sp-1);
+}
+
+.project-card__actions {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	flex: 0 0 auto;
+}
+
+/* .btn--icon with a visible border and a danger hover — deletion is the one
+   card action that should announce itself before it is pressed */
+.project-card__delete {
+	width: 40px;
+	height: 40px;
+	border-color: var(--line);
+}
+
+.project-card__delete:hover {
+	color: var(--sev-critical);
+	border-color: var(--sev-critical-edge);
+	background: var(--sev-critical-wash);
+}
+
+/* 1080 rather than 900: a card's three actions are ~350px that cannot compress
+   (nowrap buttons in a flex: 0 0 auto cluster), so between 900 and 1080 the rail
+   left the list too narrow to hold them and the page scrolled sideways. */
+@media (max-width: 1080px) {
+	/* minmax(0, ...) rather than 1fr, whose floor is the content's min-content
+	   width: a card's unbroken URL would otherwise widen the page past a phone. */
+	.projects-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* Let the actions wrap under the card body before the page itself has to. */
+@media (max-width: 820px) {
+	.project-card__actions {
+		flex-wrap: wrap;
+	}
+}
+
+@media (max-width: 680px) {
+	.project-card {
+		position: relative;
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	/* Three text buttons fill a phone-width row, which left the icon on a row of
+	   its own. The card's top corner keeps it in reach; the name and URL stop
+	   short of it. */
+	.project-card__delete {
+		position: absolute;
+		top: var(--sp-3);
+		right: var(--sp-3);
+	}
+
+	.project-card h3,
+	.project-card__url {
+		padding-right: 2.75rem;
+	}
+}
+
+.workspace-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-3);
+}
+.workspace-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+	gap: var(--sp-4);
+}
+.workspace-content {
+	display: grid;
+	gap: var(--sp-3);
+}
+.workspace-pages {
+	padding-left: var(--sp-5);
+	overflow-wrap: anywhere;
+}
+.workspace-pages li + li {
+	margin-top: var(--sp-2);
+}
+.workspace-runs {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.workspace-runs li {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: var(--sp-3);
+	padding-block: var(--sp-3);
+}
+.workspace-runs li + li {
+	border-top: 1px solid var(--line);
+}
+.workspace-runs p {
+	color: var(--ink-muted);
+	font-size: var(--fs-4);
+}
+#project-comparison {
+	scroll-margin-top: 5rem;
+}
+@media (max-width: 720px) {
+	.workspace-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.workspace-runs li {
+		align-items: start;
+		flex-direction: column;
+	}
+}

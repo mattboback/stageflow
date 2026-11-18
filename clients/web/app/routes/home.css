@@ -1,0 +1,587 @@
+/* ---- page-local: home (Daylight Gauge, light scan-first) ---- */
+
+/* ------------------------------------------------------------------ hero */
+.hero {
+	position: relative;
+	background: var(--ground);
+	padding-block: clamp(2.75rem, 5.5vw, 4.5rem);
+	overflow: clip;
+}
+.hero__grid {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: clamp(2rem, 4.5vw, 4.5rem);
+	align-items: center;
+}
+.hero h1 {
+	font-size: var(--fs-10);
+	line-height: 1.08;
+	letter-spacing: var(--track-hero);
+	font-weight: 800;
+	text-wrap: balance;
+	margin: 0 0 var(--sp-4);
+	max-width: 13em;
+}
+.hero h1 .verdict {
+	color: var(--signal-ink);
+}
+.hero__lede {
+	font-size: var(--fs-6);
+	line-height: 1.6;
+	color: var(--ink-muted);
+	max-width: 46ch;
+	margin: 0;
+	text-wrap: pretty;
+}
+
+/* scan form — the conversion point matches the headline's weight */
+.scanbar {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--sp-3);
+	margin-top: var(--sp-3);
+	max-width: 38rem;
+}
+.scanbar__field {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--sp-2);
+	min-width: 0;
+}
+.scanbar__input {
+	padding: 0.85rem 1rem;
+	font-size: var(--fs-6);
+}
+.scanbar__err {
+	font-size: var(--fs-3);
+	color: var(--sev-critical);
+	font-weight: 500;
+}
+.hero__note {
+	margin: var(--sp-3) 0 0;
+	font-size: var(--fs-4);
+}
+.hero__note a {
+	color: var(--signal-ink);
+	font-weight: 500;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+}
+.hero__note a:hover {
+	text-decoration-color: currentColor;
+}
+/* secondary scan options sit under the bar, never between it and its button */
+/* Two controls, each with its consequence underneath in the same type, so the
+   hints share a baseline. */
+.scanbar__opts {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: start;
+	gap: var(--sp-3) var(--sp-5);
+	margin-top: var(--sp-3);
+	max-width: 38rem;
+}
+.scanbar__discover {
+	display: grid;
+	justify-items: start;
+	gap: var(--sp-1);
+}
+.scanbar__discover p {
+	margin: 0;
+	font-size: var(--fs-2);
+	line-height: 1.5;
+	color: var(--ink-muted);
+}
+
+/* report preview — the output side of the scanbar */
+.hero__preview {
+	border-radius: var(--r-lg);
+	justify-self: stretch;
+}
+.hero__preview-arrow {
+	color: var(--signal-ink);
+	font-weight: 700;
+}
+/* the regression story: what StageFlow adds over a one-shot checker */
+.preview__reg {
+	display: grid;
+	gap: var(--sp-3);
+	min-width: 0;
+}
+.hero__preview-site {
+	font-family: var(--mono);
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
+/* the same stat strip the comparison opens on, so the promise matches /demo */
+.preview__stats {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	overflow: hidden;
+}
+.preview__stats li {
+	display: grid;
+	align-content: start;
+	gap: var(--sp-1);
+	padding: var(--sp-3) var(--sp-4);
+	border-left: 1px solid var(--line);
+	min-width: 0;
+}
+.preview__stats li:first-child {
+	border-left: 0;
+}
+.preview__stats span {
+	font-size: var(--fs-2);
+	font-weight: 600;
+	color: var(--ink-muted);
+}
+.preview__stats strong {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: var(--sp-2);
+	font-size: var(--fs-8);
+	line-height: 1.1;
+	color: var(--ink-strong);
+}
+.preview__stats strong .delta {
+	font-size: var(--fs-4);
+}
+.preview__stats small {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+}
+.preview__stat--bad strong {
+	color: var(--sev-critical-ink);
+}
+.preview__stat--good strong {
+	color: var(--sev-pass-ink);
+}
+/* one real new finding, cropped wide enough to read at card width */
+.preview__evidence {
+	display: grid;
+	gap: var(--sp-2);
+	color: inherit;
+	text-decoration: none;
+}
+.preview__evidence-head {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	font-size: var(--fs-4);
+	font-weight: 600;
+	color: var(--ink-strong);
+}
+.preview__evidence-title {
+	flex: 1;
+	min-width: 0;
+}
+.preview__evidence-open {
+	font-size: var(--fs-3);
+	color: var(--signal-ink);
+	white-space: nowrap;
+}
+.preview__new {
+	display: inline-flex;
+	flex: none;
+	padding: 0.1rem 0.35rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	color: var(--sev-serious-ink);
+	background: var(--sev-serious-wash);
+}
+/* The screenshot is of a light page, so the crop stays light in dark mode:
+   color-scheme resolves the highlight tokens to their light values too. */
+.preview__evidence svg {
+	color-scheme: light;
+	display: block;
+	width: 100%;
+	height: auto;
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: white;
+	transition: border-color var(--dur-1) var(--ease);
+}
+.preview__evidence:hover svg,
+.preview__evidence:focus-visible svg {
+	border-color: var(--signal);
+}
+.preview__evidence:hover .preview__evidence-title {
+	color: var(--signal-ink);
+}
+.preview__mark {
+	fill: color-mix(in oklch, var(--sev-critical) 12%, transparent);
+	stroke: var(--sev-critical);
+	stroke-width: 4;
+}
+.preview__reg-note {
+	margin: 0;
+	font-size: var(--fs-3);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
+}
+.preview__reg .btn {
+	justify-self: start;
+}
+
+/* --------------------------------------------------------------- sections */
+/* Section rhythm.
+   Every band on this page used to be within three-quarters of a rem of every
+   other, so the page read as one continuous scroll of cards rather than as a
+   sequence of arguments. The plain sections now breathe noticeably more than
+   the tinted ones, which is what makes the alternation legible: a band is a
+   held note between two longer rests, not just a change of background. */
+.section {
+	padding-block: clamp(3.5rem, 6.5vw, 6rem);
+}
+.section--band {
+	background: var(--surface);
+	border-block: 1px solid var(--line);
+	padding-block: clamp(3rem, 5vw, 4.5rem);
+}
+.section--foot {
+	background: var(--surface);
+	border-top: 1px solid var(--line);
+	padding-block: clamp(3rem, 5vw, 4.5rem);
+}
+/* when it directly follows a band, the band's own border is the seam */
+.section--band + .section--foot {
+	border-top: 0;
+}
+/* The footer follows immediately and its own border marks the boundary. It
+   sits outside <main>, so this is the rule that reaches it. */
+main:has(> .section--foot:last-child) + .site-footer {
+	margin-top: 0;
+}
+.baseline__intro h2,
+.foot__panel h2 {
+	font-size: var(--fs-8);
+	letter-spacing: var(--track-display);
+	line-height: 1.15;
+	text-wrap: balance;
+	margin: 0;
+}
+.baseline__intro p {
+	color: var(--ink-muted);
+	margin: 0.65rem 0 0;
+	font-size: var(--fs-6);
+	line-height: 1.55;
+	text-wrap: pretty;
+}
+
+/* -------------------------------------------------------- baseline track */
+.baseline {
+	display: grid;
+	gap: var(--sp-6);
+}
+.baseline__intro {
+	max-width: 56ch;
+}
+.baseline__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-3);
+}
+.basetrack {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: var(--sp-6);
+	counter-reset: none;
+}
+.basetrack__node {
+	position: relative;
+	display: flex;
+	align-items: stretch;
+}
+.basetrack__link {
+	position: absolute;
+	left: calc(-1 * var(--sp-6));
+	top: 0;
+	width: var(--sp-6);
+	height: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ink-muted);
+	font-size: var(--fs-7);
+	line-height: 1;
+	font-weight: 600;
+	pointer-events: none;
+}
+.basetrack__card {
+	flex: 1;
+	display: grid;
+	gap: var(--sp-2);
+	align-content: start;
+	padding: var(--sp-4);
+	border-radius: var(--r-md);
+	border: 1px solid transparent;
+}
+/* Step 3 is the product; steps 1–2 are setup. */
+.basetrack__node--key .basetrack__card {
+	background: var(--signal-wash);
+	border-color: var(--signal-edge);
+}
+.basetrack__node--key .basetrack__card h3 {
+	color: var(--signal-ink);
+}
+.basetrack__score {
+	font-size: var(--fs-9);
+	font-weight: 800;
+	line-height: 1;
+	color: var(--ink-strong);
+	font-variant-numeric: tabular-nums;
+}
+.basetrack__score .delta {
+	font-size: var(--fs-8);
+}
+.basetrack__card h3 {
+	font-size: var(--fs-6);
+	margin: 0;
+	line-height: 1.25;
+}
+.basetrack__card p {
+	margin: 0;
+	font-size: var(--fs-4);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
+	max-width: 30ch;
+}
+
+/* -------------------------------------------------- scanner summary band */
+.scansum {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: clamp(1.5rem, 3vw, 3rem);
+	flex-wrap: wrap;
+}
+.scansum__copy {
+	max-width: 62ch;
+}
+.scansum__copy h2 {
+	font-size: var(--fs-8);
+	letter-spacing: var(--track-display);
+	line-height: 1.15;
+	text-wrap: balance;
+	margin: 0;
+}
+.scansum__copy p {
+	color: var(--ink-muted);
+	margin: 0.65rem 0 0;
+	font-size: var(--fs-6);
+	line-height: 1.55;
+	text-wrap: pretty;
+}
+.scansum__cta {
+	flex-shrink: 0;
+}
+
+/* The five scanners, from SCANNER_META. auto-fit rather than a fixed column
+   count so the grid reflows without a media query per breakpoint. */
+.scanlist {
+	list-style: none;
+	margin: var(--sp-6) 0 0;
+	padding: 0;
+	display: grid;
+	gap: var(--sp-4) var(--sp-5);
+	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+/* All five in one row once they fit, rather than four and an orphan. */
+@media (min-width: 1200px) {
+	.scanlist {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
+.scanlist__item {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: var(--sp-3);
+	align-items: start;
+	padding-top: var(--sp-4);
+	border-top: 1px solid var(--line);
+}
+.scanlist__icon {
+	color: var(--signal-ink);
+	margin-top: 0.15rem;
+}
+.scanlist__name {
+	font-size: var(--fs-5);
+	margin: 0;
+	line-height: 1.3;
+}
+.scanlist__desc {
+	margin: 0.3rem 0 0;
+	font-size: var(--fs-3);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
+}
+
+/* --------------------------------------------------- terminal + CI panel */
+/* The terminal gets the wider column: the CLI's longest lines run to ~75
+   characters and read badly wrapped. */
+.foot {
+	display: grid;
+	grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+	gap: clamp(1.5rem, 3vw, 2.5rem);
+	/* The panel keeps its own height beside the taller transcript. */
+	align-items: start;
+}
+
+/* Intentional dark island — real CLI output, the one dark surface on home.
+   color-scheme: dark makes every token used inside resolve to its dark value
+   even on a light page, so anything dropped in here later is right by
+   construction. The background is --terminal-bg and NOT --ink-strong: the
+   latter inverts with the theme and would render this near-white. */
+.terminal {
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-edge);
+	color-scheme: dark;
+	border-radius: var(--r-lg);
+	padding: clamp(1.35rem, 2.5vw, 1.75rem);
+	display: flex;
+	align-items: center;
+}
+.terminal__pre {
+	margin: 0;
+	font-family: var(--mono);
+	font-size: var(--fs-3);
+	line-height: 1.75;
+	color: var(--terminal-ink);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	flex: 1;
+}
+.terminal__line {
+	display: block;
+	/* Keeps a blank line a line tall; matches the line-height above. */
+	min-height: 1.75em;
+	padding-left: 2ch;
+	text-indent: -2ch;
+}
+/* The page and selector under each new finding. A URL is one long word, so
+   without break-all it wraps away from its indent and leaves a blank line. */
+.terminal__line--detail {
+	padding-left: 4ch;
+	text-indent: -4ch;
+	word-break: break-all;
+	color: var(--terminal-ink-faint);
+}
+.terminal__prompt {
+	color: var(--terminal-prompt);
+	font-weight: 500;
+}
+.terminal__ok {
+	color: var(--terminal-ok);
+	font-weight: 500;
+}
+.terminal__warn {
+	color: var(--terminal-warn);
+	font-weight: 500;
+}
+
+.foot__panel {
+	border-radius: var(--r-lg);
+}
+.foot__panel .panel__body {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	height: 100%;
+	gap: var(--sp-4);
+	padding: clamp(1.35rem, 2.5vw, 1.75rem);
+}
+.foot__panel h2 {
+	max-width: 22ch;
+}
+.foot__panel .panel__body > p {
+	margin: 0;
+	font-size: var(--fs-5);
+	line-height: 1.55;
+	max-width: 46ch;
+}
+
+/* ---------------------------------------------------------- responsive */
+@media (max-width: 960px) {
+	.hero__grid,
+	.foot {
+		grid-template-columns: 1fr;
+	}
+	.hero h1 {
+		max-width: none;
+	}
+	.hero__preview {
+		margin-top: var(--sp-2);
+	}
+	.baseline__intro {
+		max-width: none;
+	}
+	.basetrack {
+		grid-template-columns: 1fr;
+		gap: var(--sp-2);
+	}
+	.basetrack__node {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	/* the connector turns downward when the track stacks */
+	.basetrack__link {
+		position: static;
+		width: auto;
+		height: auto;
+		justify-content: flex-start;
+		padding: var(--sp-1) 0 var(--sp-1) var(--sp-4);
+		font-size: 0;
+	}
+	.basetrack__link::before {
+		content: '↓';
+		font-size: var(--fs-7);
+		line-height: 1;
+	}
+	.basetrack__card p {
+		max-width: none;
+	}
+}
+
+@media (max-width: 520px) {
+	.scanbar {
+		flex-direction: column;
+		align-items: stretch;
+		max-width: none;
+	}
+	.scanbar__opts {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.scanbar__field,
+	.scanbar .btn {
+		width: 100%;
+	}
+	.hero h1 {
+		font-size: var(--fs-9);
+	}
+	.hero__preview-site {
+		display: none;
+	}
+	.preview__stats li {
+		padding: var(--sp-3);
+	}
+}

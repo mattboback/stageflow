@@ -1,0 +1,33 @@
+import type { ScanResult } from '../../types/scan';
+
+import type { SSEUpdate } from './types';
+
+export function applySseUpdate(result: ScanResult, update: SSEUpdate): ScanResult {
+	const newProgress = update.progress
+		? (() => {
+				const currentPage = update.progress.currentPage;
+				const totalPages = update.progress.totalPages;
+				const rawPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
+				return {
+					current_page: currentPage,
+					total_pages: totalPages,
+					percentage: Math.max(0, Math.min(100, Math.round(rawPercentage)))
+				};
+			})()
+		: result.progress;
+
+	// A position only means something while the job waits; claiming ends it.
+	const { queue_position: previousPosition, ...rest } = result;
+	const queuePosition =
+		update.state === 'PENDING' ? (update.queue_position ?? previousPosition) : undefined;
+
+	return {
+		...rest,
+		state: update.state,
+		...(queuePosition !== undefined ? { queue_position: queuePosition } : {}),
+		...(newProgress !== undefined ? { progress: newProgress } : {}),
+		...(update.type === 'failed' && update.error !== undefined ? { error: update.error } : {}),
+		...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
+		...(update.stage !== undefined ? { last_stage: update.stage } : {})
+	};
+}

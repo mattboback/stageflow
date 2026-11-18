@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Pricing: Acme Ledger plans for teams of every size</title>
+		<meta
+			name="description"
+			content="Acme Ledger costs $12 a month for one user and $39 a month for up to ten. Every plan includes automatic reminders and bank reconciliation."
+		/>
+		<link rel="canonical" href="https://acme-ledger.example/pricing.html" />
+		<meta property="og:title" content="Pricing: Acme Ledger plans for teams of every size" />
+		<meta property="og:description" content="Plans from $12 a month, with reminders and reconciliation included." />
+		<meta property="og:image" content="https://acme-ledger.example/og-image.png" />
+		<link rel="stylesheet" href="styles.css" />
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebPage",
+				"name": "Acme Ledger pricing"
+			}
+		</script>
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="brand" href="index.html"><img src="logo.svg" alt="" width="32" height="32" /> Acme Ledger</a>
+			<nav aria-label="Main">
+				<ul>
+					<li><a href="pricing.html">Pricing</a></li>
+					<li><a href="about.html">About</a></li>
+					<li><a class="button" href="signup.html">Start free trial</a></li>
+				</ul>
+			</nav>
+		</header>
+		<main>
+			<h1>Simple pricing that grows with your team</h1>
+			<p>
+				Every plan includes unlimited clients, automatic reminders and bank reconciliation. You only
+				pay for the people who log in. Switch plans or cancel whenever you like; there are no setup
+				fees and no long contracts.
+			</p>
+			<p>Choose your billing cycle:</p>
+			<select id="billing-cycle" name="billing-cycle"><option>Monthly billing</option><option>Annual billing</option></select>
+			<div class="plans">
+				<section class="plan">
+					<h2>Solo</h2>
+					<p class="price">$12 a month</p>
+					<p>For freelancers who send a handful of invoices each month and want them paid on time.</p>
+				</section>
+				<section class="plan">
+					<h2>Team</h2>
+					<p class="price">$39 a month</p>
+					<p>Up to ten people, shared client lists, and approval before an invoice goes out.</p>
+				</section>
+				<section class="plan">
+					<h2>Studio</h2>
+					<p class="price">$89 a month</p>
+					<p>Up to thirty people, multiple currencies, and exports for your accountant each quarter.</p>
+				</section>
+			</div>
+			<p id="pricing-footnote" class="fineprint">
+				Prices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30
+				days for a full refund.
+			</p>
+		</main>
+		<footer class="site-footer">
+			<p>Acme Ledger is a fictional company. This site is StageFlow's sample project.</p>
+			<ul>
+				<li><a href="pricing.html">Pricing</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="signup.html">Sign up</a></li>
+			</ul>
+		</footer>
+	</body>
+</html>

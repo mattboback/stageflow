@@ -1,0 +1,201 @@
+name: Golden Regression
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GO_VERSION: '1.26.11'
+  GOTOOLCHAIN: 'go1.26.11'
+  NODE_VERSION: '24'
+  BUN_VERSION: '1.3.8'
+  STAGEFLOW_API_URL: 'http://127.0.0.1:18080'
+
+jobs:
+  golden:
+    name: Golden ZIP Scan Diff
+    runs-on: ubuntu-latest
+    # Chain off successful pushes; manual CI runs do not trigger another stack.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    # Apply concurrency only after this job qualifies to run.
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}
+      cancel-in-progress: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          cache-dependency-path: '**/*.sum'
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+          # podman compose delegates to the docker-compose plugin, which needs
+          # the rootless API socket listening.
+          systemctl --user enable --now podman.socket
+
+      - name: Prepare dependencies
+        run: |
+          go mod download
+          (cd clients/web && bun install --frozen-lockfile)
+          (cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile)
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          {
+            printf 'PLATFORM_API_TOKEN=ci-platform-api-token\n'
+            printf 'STAGEFLOW_NETWORK_NAME=stageflow_net\n'
+            printf 'FRONTEND_PORT=3020\nVITE_SITE_URL=http://localhost:3020\n'
+            # Host-network ZIP extractors serve on 8080; keep the API off that port.
+            printf 'PLATFORM_API_PORT=18080\nVITE_API_URL=%s\n' "$STAGEFLOW_API_URL"
+            printf 'PLATFORM_API_ALLOW_PRIVATE_TARGETS=true\nPOD_NETNS_MODE=host\nPOD_NETWORK=\n'
+          } >> .env
+
+      - name: Build stageflow CLI
+        run: |
+          go build -o /tmp/stageflow ./clients/cli/cmd/stageflow
+          sudo install -m 0755 /tmp/stageflow /usr/local/bin/stageflow
+
+      - name: Build container images
+        run: ./infra/scripts/build-images.sh
+
+      - name: Start stack
+        run: |
+          podman network inspect stageflow_net >/dev/null 2>&1 || podman network create stageflow_net
+          # The orchestrator initializes the fresh v2 schema before API startup.
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            --env-file .env up -d postgres orchestrator
+          for _ in {1..60}; do
+            if curl -fsS http://127.0.0.1:8081/healthz >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8081/healthz >/dev/null
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            --env-file .env up -d
+
+      - name: Wait for stack
+        run: |
+          for url in \
+            "${STAGEFLOW_API_URL}/healthz" \
+            http://127.0.0.1:3020/
+          do
+            echo "Waiting for ${url}"
+            for _ in {1..60}; do
+              if curl -fsS "${url}" >/dev/null; then
+                break
+              fi
+              sleep 2
+            done
+            curl -fsS "${url}" >/dev/null
+          done
+
+      - name: Run golden regression script
+        run: bash qa/e2e/scan-diff-golden.sh
+        env:
+          SCAN_DIFF_GOLDEN_ARTIFACT_DIR: artifacts/scan-diff-golden
+          STAGEFLOW_API_KEY: ci-platform-api-token
+
+      # Check the frontend with StageFlow itself. The stack is already up
+      # with the real frontend container on :3020.
+      #
+      # Scoped to --scanner axe deliberately: the claim being substantiated is an
+      # accessibility one. Folding in seo/link-checker/lighthouse would make a
+      # broken outbound link fail the accessibility gate.
+      - name: Scan StageFlow's own UI with StageFlow
+        run: |
+          mkdir -p artifacts/self-scan
+          stageflow scan http://localhost:3020/ \
+            --api "$STAGEFLOW_API_URL" \
+            --scanner axe \
+            --allow-private-targets \
+            --fail-on serious \
+            --format json \
+            > artifacts/self-scan/landing.json
+        env:
+          STAGEFLOW_API_KEY: ci-platform-api-token
+
+      - name: Summarize self-scan
+        if: always()
+        run: |
+          report=artifacts/self-scan/landing.json
+          if [[ ! -s "$report" ]]; then
+            echo "No self-scan report produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo '## StageFlow scanning StageFlow'
+            echo ''
+            echo '| severity | findings |'
+            echo '| --- | --- |'
+            jq -r '
+              [.report.issues[]?.severity] | group_by(.) | map({s: .[0], n: length})
+              | if length == 0 then "| _none_ | 0 |"
+                else .[] | "| \(.s) | \(.n) |" end
+            ' "$report"
+            echo ''
+            jq -r '
+              .report.issues[]? | "- **\(.severity)** `\(.ruleId)` — \(.title)"
+            ' "$report" | sort -u
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload self-scan report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-scan-report
+          path: artifacts/self-scan
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Capture stack logs
+        if: failure()
+        run: |
+          mkdir -p artifacts/scan-diff-golden
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            --env-file .env logs --no-color > artifacts/scan-diff-golden/compose.log || true
+
+      - name: Upload golden artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: golden-regression-artifacts
+          path: artifacts/scan-diff-golden
+          if-no-files-found: ignore
+          retention-days: 7

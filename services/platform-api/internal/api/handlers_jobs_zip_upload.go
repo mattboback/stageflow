@@ -1,0 +1,569 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/mattboback/stageflow/libs/go/httputil"
+	"github.com/mattboback/stageflow/libs/go/logging"
+	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
+)
+
+const (
+	maxZipFileSize       = 100 * 1024 * 1024
+	maxMultipartOverhead = 2 * 1024 * 1024
+	maxUploadRequestSize = maxZipFileSize + maxMultipartOverhead
+)
+
+// Note: keep reverse proxies/LB client_max_body_size in sync with maxUploadRequestSize.
+
+type formFieldTooLargeError struct {
+	limit int64
+}
+
+func (e *formFieldTooLargeError) Error() string {
+	return fmt.Sprintf("multipart field exceeds %d byte limit", e.limit)
+}
+
+func readFormValue(part *multipart.Part, limit int64) (string, error) {
+	data, err := io.ReadAll(io.LimitReader(part, limit+1))
+	if err != nil {
+		return "", err
+	}
+
+	if int64(len(data)) > limit {
+		return "", &formFieldTooLargeError{limit: limit}
+	}
+
+	return string(data), nil
+}
+
+func formReadClientError(field string, err error) error {
+	var tooLarge *formFieldTooLargeError
+	if errors.As(err, &tooLarge) {
+		return newClientDetailError(httputil.NewValidationError(
+			field,
+			fmt.Sprintf("%s field is too large", field),
+			fmt.Sprintf("Keep %s at or below %d bytes.", field, tooLarge.limit),
+		))
+	}
+
+	return newClientMessageError(fmt.Sprintf("Failed to read %s field", field))
+}
+
+func sanitizeFilename(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	return filepath.Base(name)
+}
+
+type clientError struct {
+	status  int
+	detail  *httputil.ErrorDetail
+	message string
+}
+
+func (e *clientError) Error() string {
+	switch {
+	case e.message != "":
+		return e.message
+	case e.detail != nil:
+		return e.detail.Message
+	default:
+		return "client error"
+	}
+}
+
+func newClientDetailError(detail httputil.ErrorDetail) *clientError {
+	return &clientError{status: http.StatusBadRequest, detail: &detail}
+}
+
+func newClientMessageError(message string) *clientError {
+	return &clientError{status: http.StatusBadRequest, message: message}
+}
+
+func newClientStatusMessageError(status int, message string) *clientError {
+	return &clientError{status: status, message: message}
+}
+
+type zipJobRequest struct {
+	profile        string
+	identityScope  string
+	verification   *models.VerificationConfig
+	pagePaths      []string
+	jobID          string
+	runID          string
+	zipPath        string
+	modules        []string
+	scannerConfigs map[string]map[string]any
+	screenshot     bool
+}
+
+type zipUploadState struct {
+	profile        string
+	identityScope  string
+	verification   *models.VerificationConfig
+	pagePaths      []string
+	fileUploaded   bool
+	modulesValues  []string
+	screenshot     *bool
+	zipPath        string
+	scannerConfigs map[string]map[string]any
+}
+
+func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	if s.config.DisableZIPUploads {
+		httputil.RespondError(
+			w,
+			http.StatusForbidden,
+			"ZIP uploads are disabled on this deployment. Scan public URLs instead.",
+		)
+
+		return
+	}
+
+	if !s.ensureAdmissionDisk(r.Context(), w) {
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
+
+	jobReq, parseErr := s.parseZipUpload(r.Context(), r)
+	if parseErr != nil && s.handleZipParseError(r.Context(), w, parseErr) {
+		return
+	}
+
+	retainFiles := false
+	defer func() {
+		if !retainFiles && jobReq != nil {
+			s.cleanupRejectedJob(jobReq.jobID)
+		}
+	}()
+
+	jobCtx := logging.WithJobID(r.Context(), jobReq.jobID)
+	if err := jobCtx.Err(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+		} else {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+		}
+
+		return
+	}
+
+	if err := s.enqueueZipJob(jobCtx, jobReq); err != nil {
+		retainFiles = admissionMayBeCommitted(err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+			return
+		}
+
+		if errors.Is(err, context.Canceled) {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+			return
+		}
+
+		s.respondAdmissionError(w, err)
+
+		return
+	}
+
+	retainFiles = true
+
+	httputil.RespondCreated(w, map[string]any{
+		"job_id":  jobReq.jobID,
+		"status":  "pending",
+		"message": "Job created successfully",
+	})
+}
+
+func (s *Server) handleZipParseError(ctx context.Context, w http.ResponseWriter, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+		return true
+	}
+
+	if errors.Is(err, context.Canceled) {
+		httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+		return true
+	}
+
+	if isRequestTooLarge(err) {
+		httputil.RespondError(w, http.StatusRequestEntityTooLarge,
+			fmt.Sprintf("Request body too large (max %d bytes)", maxUploadRequestSize))
+
+		return true
+	}
+
+	var cErr *clientError
+	if errors.As(err, &cErr) {
+		if cErr.detail != nil {
+			httputil.RespondStructuredError(w, cErr.status, *cErr.detail)
+		} else {
+			httputil.RespondError(w, cErr.status, cErr.message)
+		}
+
+		return true
+	}
+
+	logging.Error(ctx, "Zip upload failed", "error", err)
+	httputil.RespondError(w, http.StatusInternalServerError, "Failed to handle upload")
+
+	return true
+}
+
+func isRequestTooLarge(err error) bool {
+	var maxErr *http.MaxBytesError
+	if errors.As(err, &maxErr) {
+		return true
+	}
+
+	msg := err.Error()
+
+	return strings.Contains(msg, "http: request body too large") || strings.Contains(msg, "request body too large")
+}
+
+func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *zipJobRequest, requestErr error) {
+	reader, err := r.MultipartReader()
+	if err != nil {
+		return nil, newClientMessageError("Invalid multipart form: " + err.Error())
+	}
+
+	jobID := uuid.New().String()
+	jobCtx := logging.WithJobID(ctx, jobID)
+	runID := uuid.New().String()[:8]
+	jobCtx = logging.WithRunID(jobCtx, runID)
+
+	state := &zipUploadState{}
+	defer func() {
+		if requestErr != nil && state.fileUploaded {
+			s.cleanupRejectedJob(jobID)
+		}
+	}()
+
+	for {
+		part, partErr := reader.NextPart()
+		if errors.Is(partErr, io.EOF) {
+			break
+		}
+
+		if partErr != nil {
+			return nil, newClientMessageError("Failed to read multipart form: " + partErr.Error())
+		}
+
+		if partProcessErr := s.processZipPart(jobCtx, part, jobID, state); partProcessErr != nil {
+			part.Close()
+
+			return nil, partProcessErr
+		}
+
+		part.Close()
+	}
+
+	if !state.fileUploaded {
+		return nil, newClientDetailError(httputil.NewValidationError(
+			"file",
+			"Missing required field 'file'",
+			"Please include a ZIP file in the 'file' field of your multipart form upload.",
+		))
+	}
+
+	modules, err := scannercatalog.Select(state.modulesValues)
+	if err != nil {
+		if detail, ok := unsupportedModuleDetail(err); ok {
+			return nil, newClientDetailError(detail)
+		}
+
+		return nil, newClientMessageError(err.Error())
+	}
+
+	if detail := validateProductConfig(state.profile, state.identityScope, state.verification, modules); detail != nil {
+		return nil, newClientDetailError(*detail)
+	}
+
+	screenshot := defaultScreenshot
+
+	if state.screenshot != nil {
+		screenshot = *state.screenshot
+	}
+
+	return &zipJobRequest{
+		profile:        state.profile,
+		identityScope:  state.identityScope,
+		verification:   state.verification,
+		pagePaths:      state.pagePaths,
+		jobID:          jobID,
+		runID:          runID,
+		zipPath:        state.zipPath,
+		modules:        modules,
+		scannerConfigs: state.scannerConfigs,
+		screenshot:     screenshot,
+	}, nil
+}
+
+func (s *Server) processZipPart(ctx context.Context, part *multipart.Part, jobID string, state *zipUploadState) error {
+	switch part.FormName() {
+	case "profile", "identity_scope", "verification", "page_paths":
+		return handleProductConfigPart(part, state)
+	case "file":
+		return s.handleZipFilePart(ctx, part, jobID, state)
+	case "modules":
+		return handleModulesPart(ctx, part, state)
+	case "scanner_configs":
+		return handleScannerConfigsPart(ctx, part, state)
+	case "browser":
+		return handleBrowserEnginePart(ctx, part)
+	case "screenshot":
+		return handleScreenshotPart(ctx, part, state)
+	default:
+		drainUnknownPart(ctx, part)
+
+		return nil
+	}
+}
+
+func (s *Server) handleZipFilePart(
+	ctx context.Context,
+	part *multipart.Part,
+	jobID string,
+	state *zipUploadState,
+) error {
+	if state.fileUploaded {
+		return newClientDetailError(
+			httputil.NewValidationError(
+				"file",
+				"Multiple 'file' parts are not supported",
+				"Only include one ZIP archive per request.",
+			),
+		)
+	}
+
+	filename := sanitizeFilename(part.FileName())
+	if filename == "" || !strings.HasSuffix(strings.ToLower(filename), ".zip") {
+		return newClientDetailError(
+			httputil.NewValidationError(
+				"file",
+				"File must be a ZIP archive",
+				"Upload a .zip file that contains your job data.",
+			),
+		)
+	}
+
+	path := jobID + "/input.zip"
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	limited := &io.LimitedReader{R: part, N: maxZipFileSize + 1}
+	if err := s.config.Files.WriteInput(ctx, jobID, limited); err != nil {
+		logging.Error(ctx, "Failed to store ZIP", "error", err)
+
+		return fmt.Errorf("failed to store file: %w", err)
+	}
+
+	if limited.N == 0 {
+		s.cleanupRejectedJob(jobID)
+
+		return newClientStatusMessageError(
+			http.StatusRequestEntityTooLarge,
+			fmt.Sprintf("ZIP file too large (max %d bytes)", maxZipFileSize),
+		)
+	}
+
+	state.zipPath = path
+	state.fileUploaded = true
+
+	return nil
+}
+
+func handleModulesPart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
+	value, err := readFormValue(part, 16*1024)
+	if err != nil {
+		logging.Error(ctx, "Failed to read modules value", "error", err)
+
+		return formReadClientError("modules", err)
+	}
+
+	if strings.TrimSpace(value) != "" {
+		state.modulesValues = splitCSV(value)
+	}
+
+	return nil
+}
+
+func handleScannerConfigsPart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
+	value, err := readFormValue(part, 256*1024)
+	if err != nil {
+		logging.Error(ctx, "Failed to read scanner_configs value", "error", err)
+
+		return formReadClientError("scanner_configs", err)
+	}
+
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+
+	var parsed map[string]map[string]any
+	if unmarshalErr := json.Unmarshal([]byte(value), &parsed); unmarshalErr != nil {
+		logging.Error(ctx, "Failed to parse scanner_configs", "error", unmarshalErr)
+
+		return newClientDetailError(httputil.NewValidationError(
+			"scanner_configs",
+			"Invalid scanner_configs JSON",
+			`Provide a JSON object mapping scanner IDs to option objects, e.g. {"axe":{"rules":{"color-contrast":{"enabled":false}}}}`,
+		))
+	}
+
+	state.scannerConfigs = parsed
+
+	return nil
+}
+
+func handleBrowserEnginePart(ctx context.Context, part *multipart.Part) error {
+	value, err := readFormValue(part, 32)
+	if err != nil {
+		logging.Error(ctx, "Failed to read browser value", "error", err)
+
+		return formReadClientError("browser", err)
+	}
+
+	if detail, ok := checkBrowserEngine(value); !ok {
+		return newClientDetailError(detail)
+	}
+
+	return nil
+}
+
+func handleScreenshotPart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
+	value, err := readFormValue(part, 32)
+	if err != nil {
+		logging.Error(ctx, "Failed to read screenshot value", "error", err)
+
+		return formReadClientError("screenshot", err)
+	}
+
+	enabled := strings.EqualFold(strings.TrimSpace(value), "true")
+	state.screenshot = &enabled
+
+	return nil
+}
+
+func drainUnknownPart(ctx context.Context, part *multipart.Part) {
+	if _, err := readFormValue(part, 8*1024); err != nil {
+		logging.Warn(ctx, "Failed to drain unknown multipart field", "field", part.FormName(), "error", err)
+	}
+}
+
+func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
+	if req.runID != "" {
+		ctx = logging.WithRunID(ctx, req.runID)
+	}
+
+	now := time.Now().UTC()
+	job := &models.Job{
+		State:            models.JobStatePending,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		ExpectedScanners: append([]string(nil), req.modules...),
+		ID:               req.jobID,
+		InputType:        "zip",
+		InputPath:        req.zipPath,
+		Config: models.JobConfig{
+			Profile:        req.profile,
+			IdentityScope:  req.identityScope,
+			Verification:   req.verification,
+			PagePaths:      req.pagePaths,
+			Modules:        req.modules,
+			ScannerConfigs: req.scannerConfigs,
+			Screenshot:     req.screenshot,
+			// No AllowPrivateTargets: scanners allow the extractor's loopback
+			// origin from its "static" provenance, and block every other private
+			// address an uploaded page tries to load.
+		},
+	}
+
+	if s.config.ValidateZIP == nil {
+		return errors.New("ZIP validator is unavailable")
+	}
+
+	if validationErr := s.config.ValidateZIP(ctx, req.jobID); validationErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+
+		return newClientStatusMessageError(
+			http.StatusUnprocessableEntity,
+			"ZIP archive is invalid or exceeds safety limits",
+		)
+	}
+
+	if err := s.admitJob(ctx, job); err != nil {
+		return err
+	}
+
+	logging.Info(ctx, "Job created", "filename", filepath.Base(req.zipPath), "input_type", "zip")
+
+	return nil
+}
+
+func handleProductConfigPart(part *multipart.Part, state *zipUploadState) error {
+	value, err := io.ReadAll(io.LimitReader(part, 8193))
+	if err != nil || len(value) > 8192 {
+		return newClientMessageError("Invalid or oversized product configuration")
+	}
+
+	switch part.FormName() {
+	case "profile":
+		state.profile = strings.TrimSpace(string(value))
+	case "identity_scope":
+		state.identityScope = strings.TrimSpace(string(value))
+	case "verification":
+		if decodeErr := json.Unmarshal(value, &state.verification); decodeErr != nil {
+			return newClientMessageError("Invalid verification JSON")
+		}
+	case "page_paths":
+		if decodeErr := json.Unmarshal(
+			value,
+			&state.pagePaths,
+		); decodeErr != nil ||
+			len(state.pagePaths) > maxURLCount {
+			return newClientMessageError("Invalid page_paths JSON")
+		}
+
+		for _, target := range state.pagePaths {
+			if !strings.HasPrefix(target, "/") || len(target) > maxURLLength {
+				return newClientMessageError("Invalid page path")
+			}
+		}
+	}
+
+	return nil
+}

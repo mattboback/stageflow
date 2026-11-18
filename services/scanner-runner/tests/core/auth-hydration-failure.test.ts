@@ -1,0 +1,291 @@
+/**
+ * AuthHydrationError path test.
+ *
+ * Asserts the contract from the design note: when auth hydration fails the
+ * iterator does not run page scans, every page surfaces an
+ * `auth-hydration-failed` issue at severity `critical`, and the post-login URL
+ * captured at failure is included in the issue metadata.
+ */
+
+import type { BrowserContext, Page } from 'playwright';
+
+import { type Mock, describe, expect, it, vi } from 'vitest';
+
+import type { BrowserManager } from '../../src/core/browser-manager';
+import type {
+	PageScanResult,
+	Provenance,
+	ScannerConfig,
+	ScannerLogger
+} from '../../src/core/types';
+
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
+
+const fsHelperMocks = vi.hoisted(() => ({
+	pathExists: vi.fn().mockResolvedValue(false),
+	readJson: vi.fn(),
+	writeJson: vi.fn().mockResolvedValue(undefined),
+	ensureDir: vi.fn().mockResolvedValue(undefined)
+}));
+
+const chmodMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../src/utils/fs', () => fsHelperMocks);
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		chmod: chmodMock
+	};
+});
+
+const fsMock: {
+	pathExists: ReturnType<typeof vi.fn>;
+	readJson: ReturnType<typeof vi.fn>;
+	writeJson: ReturnType<typeof vi.fn>;
+	ensureDir: ReturnType<typeof vi.fn>;
+	chmod: ReturnType<typeof vi.fn>;
+} = { ...fsHelperMocks, chmod: chmodMock };
+
+const baseScannerConfig: ScannerConfig = {
+	jobId: 'test-job',
+	provenancePath: '/tmp/provenance.json',
+	resultsDir: '/tmp/results',
+	scannerName: 'axe',
+	concurrency: 2,
+	maxRetries: 1,
+	browser: {
+		headless: true,
+		args: [],
+		defaultViewport: { width: 1280, height: 720 },
+		deviceScaleFactor: 1,
+		defaultTimeout: 30_000,
+		pageLoadTimeout: 15_000
+	}
+};
+
+const SECRET_USER = 'user+tag@example.com';
+const SECRET_PASSWORD = 'p@ss word+1';
+
+function makeLogger(): { [Level in keyof ScannerLogger]: Mock<ScannerLogger[Level]> } {
+	return {
+		info: vi.fn<ScannerLogger['info']>(),
+		warn: vi.fn<ScannerLogger['warn']>(),
+		error: vi.fn<ScannerLogger['error']>(),
+		debug: vi.fn<ScannerLogger['debug']>()
+	};
+}
+
+function makeBrowserManager(
+	overrides?: Partial<BrowserManager>,
+	pageOverrides?: Partial<Record<keyof Page, unknown>>
+): BrowserManager {
+	const mockPage = {
+		goto: vi.fn().mockResolvedValue(undefined),
+		close: vi.fn().mockResolvedValue(undefined),
+		setViewportSize: vi.fn().mockResolvedValue(undefined),
+		waitForLoadState: vi.fn().mockResolvedValue(undefined),
+		waitForSelector: vi.fn().mockResolvedValue(undefined),
+		waitForTimeout: vi.fn().mockResolvedValue(undefined),
+		evaluate: vi.fn().mockResolvedValue(true),
+		url: vi.fn().mockReturnValue('https://app.example.com/login'),
+		...pageOverrides
+	} as unknown as Page;
+
+	const mockContext = {
+		newPage: vi.fn().mockResolvedValue(mockPage),
+		close: vi.fn().mockResolvedValue(undefined)
+	} as unknown as BrowserContext;
+
+	return {
+		createContext: vi.fn().mockResolvedValue(mockContext),
+		assertPageHealthy: vi.fn(),
+		closePage: vi.fn().mockImplementation((page: Page) => page.close()),
+		navigateToPage: vi.fn().mockResolvedValue(undefined),
+		executePreScanActions: vi.fn().mockResolvedValue(undefined),
+		...overrides
+	} as unknown as BrowserManager;
+}
+
+describe('PageIterator auth hydration failure path', () => {
+	it('surfaces auth-hydration-failed issues for storage_state when the artifact is missing', async () => {
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [
+				{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' },
+				{ id: 'settings', path: '/settings', url: 'https://app.example.com/settings' }
+			],
+			auth: { mode: 'storage_state' }
+		};
+
+		const browserManager = makeBrowserManager();
+		const iterator = new PageIterator(browserManager, baseScannerConfig);
+		const scanCallback = vi.fn<PageScanCallback>();
+
+		const results = await iterator.iteratePages(provenance, scanCallback);
+
+		expect(scanCallback).not.toHaveBeenCalled();
+		expect(browserManager.createContext).not.toHaveBeenCalled();
+
+		expect(results).toHaveLength(2);
+		for (const result of results) {
+			expect(result.success).toBe(false);
+			expect(result.retryable).toBe(false);
+			expect(result.error).toMatch(/Failed to read mounted storage state/);
+			expect(result.issues).toHaveLength(1);
+			const issue = result.issues[0]!;
+			expect(issue.id).toBe('auth-hydration-failed');
+			expect(issue.severity).toBe('critical');
+			expect(issue.category).toBe('auth');
+			expect(issue.scanner).toBe('axe');
+			expect(issue.metadata).toMatchObject({ mode: 'storage_state' });
+		}
+
+		expect(fsMock.ensureDir).toHaveBeenCalled();
+	});
+
+	it('rejects storage_state when its read-only mount is absent', async () => {
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: { mode: 'storage_state' }
+		};
+
+		const browserManager = makeBrowserManager();
+		const iterator = new PageIterator(browserManager, baseScannerConfig);
+		const scanCallback = vi.fn<PageScanCallback>();
+
+		const results: PageScanResult[] = await iterator.iteratePages(provenance, scanCallback);
+
+		expect(results).toHaveLength(1);
+		expect(results[0]!.success).toBe(false);
+		expect(results[0]!.issues[0]!.id).toBe('auth-hydration-failed');
+		expect(results[0]!.issues[0]!.description).toMatch(/Failed to read mounted storage state/);
+		expect(browserManager.createContext).not.toHaveBeenCalled();
+	});
+
+	it('redacts raw and encoded credentials from form hydration failures', async () => {
+		const formEncodedUser = new URLSearchParams([['username', SECRET_USER]])
+			.toString()
+			.slice('username='.length);
+		const formEncodedPassword = new URLSearchParams([['password', SECRET_PASSWORD]])
+			.toString()
+			.slice('password='.length);
+		const capturedUrl =
+			`https://app.example.com/login?username=${formEncodedUser}` +
+			`&password=${encodeURIComponent(SECRET_PASSWORD)}`;
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: '#username', value: SECRET_USER },
+					{ type: 'fill', selector: '#password', value: SECRET_PASSWORD },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		};
+		const browserManager = makeBrowserManager(
+			{
+				executePreScanActions: vi
+					.fn()
+					.mockRejectedValue(new Error(`submit failed for ${formEncodedPassword}`))
+			},
+			{ url: vi.fn().mockReturnValue(capturedUrl) }
+		);
+		const logger = makeLogger();
+		const iterator = new PageIterator(browserManager, baseScannerConfig, logger);
+
+		const results = await iterator.iteratePages(provenance, vi.fn<PageScanCallback>());
+
+		expect(results[0]?.issues[0]?.metadata).toMatchObject({
+			mode: 'form',
+			postLoginUrl: 'https://app.example.com/login?username=[REDACTED]&password=[REDACTED]'
+		});
+		const recorded = JSON.stringify({
+			results,
+			logs: {
+				info: logger.info.mock.calls,
+				warn: logger.warn.mock.calls,
+				error: logger.error.mock.calls,
+				debug: logger.debug.mock.calls
+			}
+		});
+		for (const canary of [
+			SECRET_USER,
+			SECRET_PASSWORD,
+			encodeURIComponent(SECRET_USER),
+			encodeURIComponent(SECRET_PASSWORD),
+			formEncodedUser,
+			formEncodedPassword
+		]) {
+			expect(recorded).not.toContain(canary);
+		}
+		expect(recorded).toContain('[REDACTED]');
+	});
+
+	it('fails form auth when success waiting leaves the browser on a visible login form', async () => {
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: 'input[name=email]', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'input[name=password]', value: 'wrong-password' },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		};
+
+		// Wrong credentials keep the browser on a visible login form, so the
+		// post-login grace poll exhausts its window before declaring failure.
+		// Drive that window with fake timers (the mocked `waitForTimeout` advances
+		// the clock) so the test exercises the real timeout without sleeping for it.
+		vi.useFakeTimers();
+		const browserManager = makeBrowserManager(undefined, {
+			waitForTimeout: vi.fn().mockImplementation((ms: number) => {
+				vi.advanceTimersByTime(ms);
+				return Promise.resolve();
+			})
+		});
+		const iterator = new PageIterator(browserManager, baseScannerConfig);
+		const scanCallback = vi.fn<PageScanCallback>();
+
+		let results: PageScanResult[];
+		try {
+			results = await iterator.iteratePages(provenance, scanCallback);
+		} finally {
+			vi.useRealTimers();
+		}
+
+		expect(scanCallback).not.toHaveBeenCalled();
+		expect(browserManager.executePreScanActions).toHaveBeenCalledOnce();
+		expect(results).toHaveLength(1);
+		expect(results[0]!.success).toBe(false);
+		expect(results[0]!.error).toContain('did not leave the login page');
+		expect(results[0]!.issues[0]!).toMatchObject({
+			id: 'auth-hydration-failed',
+			severity: 'critical',
+			category: 'auth',
+			metadata: {
+				mode: 'form',
+				loginUrl: 'https://app.example.com/login',
+				postLoginUrl: 'https://app.example.com/login'
+			}
+		});
+	});
+});

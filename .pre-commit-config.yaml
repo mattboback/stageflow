@@ -1,0 +1,37 @@
+default_install_hook_types:
+  - pre-commit
+
+# Paths whose bytes are asserted elsewhere and must never be "tidied":
+#   qa/fixtures/, testdata/  golden files compared byte-for-byte by tests
+exclude: ^(qa/fixtures/|.*/testdata/|libs/contracts/[^/]+/generated/)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      # tsconfig files are JSONC: the app/node variants carry comments, so the
+      # strict JSON parser cannot read them. Anchored on the tsconfig prefix so
+      # tsconfig.app.json and tsconfig.node.json are covered too.
+      - id: check-json
+        exclude: (^|/)tsconfig(\.[^.]+)?\.json$
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: stageflow-markdown-links
+        name: stageflow-markdown-links
+        entry: node devtools/scripts/check-markdown-links.mjs
+        language: system
+        files: "\\.md$"
+        pass_filenames: false

@@ -1,0 +1,436 @@
+/* ---- page-local: live scan status (Daylight Gauge) ---- */
+
+.run {
+	padding-block: clamp(1.5rem, 3vw, 2.25rem) 4rem;
+	background: var(--ground);
+}
+/* The status page shares the app shell rather than capping itself: a 66rem cap
+   on the narrower plain .wrap gutter put this page's h1 further inboard of the
+   header brand than any other surface. */
+
+/* status header */
+.shead {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 1.15rem 1.5rem;
+	align-items: center;
+	padding: 1.15rem 1.35rem;
+	border: 1px solid var(--line);
+	border-radius: var(--r-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+}
+.shead--failed {
+	border-color: var(--sev-critical-edge);
+}
+.shead__id {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+}
+.shead__id h1 {
+	font-size: var(--fs-7);
+	margin: 0;
+	line-height: 1.2;
+}
+.shead__meta-row {
+	margin-top: 0.4rem;
+	display: flex;
+	gap: 1rem 1.25rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+.shead__url {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	overflow-wrap: anywhere;
+}
+.shead__leave {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+}
+.shead__progress {
+	margin: 0.5rem 0 0;
+	font-size: var(--fs-4);
+	font-weight: 600;
+	color: var(--ink-strong);
+}
+.shead__meta {
+	display: flex;
+	gap: 1.75rem;
+	align-items: center;
+}
+.timer {
+	text-align: right;
+}
+.timer b {
+	font-weight: 700;
+	font-size: var(--fs-8);
+	color: var(--ink-strong);
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+.timer small {
+	display: block;
+	font-size: var(--fs-2);
+	font-weight: 500;
+	color: var(--ink-muted);
+	margin-top: 0.25rem;
+}
+
+/* overall progress meter */
+.meter {
+	margin-top: 0.9rem;
+	height: 8px;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	overflow: hidden;
+}
+.meter > i {
+	display: block;
+	height: 100%;
+	background: var(--signal);
+	border-radius: var(--r-pill);
+	width: 100%;
+	transform: scaleX(0);
+	transform-origin: left center;
+	transition: transform 0.55s var(--ease);
+	position: relative;
+}
+.meter > i.live::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(45deg, transparent 0 8px, var(--stripe) 8px 16px);
+	animation: slide 0.95s linear infinite;
+}
+@keyframes slide {
+	to {
+		background-position: 22px 0;
+	}
+}
+
+/* fail note: base in instrument.css; the run page sets it smaller and clear
+   of the meter above it */
+.run .note {
+	font-size: var(--fs-3);
+	margin-top: 1rem;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: 1fr 19.5rem;
+	gap: 1.15rem;
+	align-items: start;
+	margin-top: 1.25rem;
+}
+.grid__main {
+	display: grid;
+	gap: 1.1rem;
+	min-width: 0;
+}
+
+.ch-summary {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	font-weight: 500;
+	margin-left: 0.55rem;
+}
+.transport {
+	font-size: var(--fs-2);
+	font-weight: 500;
+	color: var(--ink-muted);
+}
+.transport--live {
+	color: var(--signal-ink);
+}
+
+/* scanner rows */
+.ch {
+	display: grid;
+	grid-template-columns: 1rem 1fr auto;
+	gap: 0.75rem;
+	align-items: center;
+	padding: 0.8rem 1.15rem;
+	border-top: 1px solid var(--line);
+	background: var(--surface);
+	transition: background var(--dur-1) var(--ease);
+}
+.ch:first-child {
+	border-top: 0;
+}
+.ch:last-child {
+	border-radius: 0 0 var(--r-md) var(--r-md);
+}
+.ch__led {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	justify-self: center;
+	flex-shrink: 0;
+}
+.ch__name {
+	font-weight: 600;
+	color: var(--ink-strong);
+	font-size: var(--fs-4);
+}
+.ch__sub {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	margin-top: 0.1rem;
+}
+/* A running scanner's page progress, under the text that gives the number. */
+.ch__bar {
+	display: block;
+	max-width: 12rem;
+	height: 4px;
+	margin-top: 0.4rem;
+	border-radius: var(--r-pill);
+	background: var(--line);
+	overflow: hidden;
+}
+.ch__bar > i {
+	display: block;
+	height: 100%;
+	background: var(--signal);
+	transform-origin: left center;
+	transition: transform 0.55s var(--ease);
+}
+.ch__right {
+	justify-self: end;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+.ch--done .ch__led {
+	background: var(--sev-pass);
+}
+.ch--done .ch__bar > i {
+	background: var(--sev-pass);
+}
+/* Completed rows keep the same height and title weight as active rows. */
+.ch--done .ch__name {
+	font-weight: 600;
+	color: var(--ink-strong);
+	font-size: var(--fs-4);
+}
+.ch--run {
+	background: var(--signal-wash);
+}
+.ch--run .ch__led {
+	background: var(--signal);
+	animation: pulse 1.4s var(--ease) infinite;
+}
+.ch--queue .ch__led,
+.ch--prep .ch__led {
+	background: var(--line-strong);
+}
+.ch--prep .ch__led {
+	animation: pulse 1.4s var(--ease) infinite;
+}
+.ch--err .ch__led {
+	background: var(--sev-critical);
+}
+@keyframes pulse {
+	0% {
+		box-shadow: 0 0 0 0 var(--signal-ring);
+	}
+	70%,
+	100% {
+		box-shadow: 0 0 0 6px var(--signal-ring-fade);
+	}
+}
+.ch__issues {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
+.ch__tag {
+	font-size: var(--fs-2);
+	font-weight: 600;
+}
+.ch--done .ch__tag {
+	color: var(--sev-pass-ink);
+}
+.ch--run .ch__tag {
+	color: var(--signal-ink);
+}
+.ch--err .ch__tag {
+	color: var(--sev-critical);
+}
+.ch--queue .ch__tag {
+	color: var(--ink-muted);
+}
+.ch--queue .ch__name {
+	font-weight: 600;
+}
+
+/* log readout — diagnostic detail, collapsed by default */
+.log {
+	grid-column: 1 / -1;
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+	overflow: hidden;
+}
+.log__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.8rem 1.15rem;
+	cursor: pointer;
+	list-style: none;
+	min-height: 44px;
+}
+.log__summary::-webkit-details-marker {
+	display: none;
+}
+.log__summary-title {
+	font-weight: 700;
+	font-size: var(--fs-4);
+	color: var(--ink-strong);
+	flex-shrink: 0;
+}
+.log__summary-last {
+	flex: 1;
+	min-width: 0;
+	font-size: var(--fs-1);
+	color: var(--ink-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.log__summary-toggle {
+	flex-shrink: 0;
+	width: 9px;
+	height: 9px;
+	border-right: 2px solid var(--ink-muted);
+	border-bottom: 2px solid var(--ink-muted);
+	transform: rotate(45deg);
+	transition: transform var(--dur-1) var(--ease);
+	margin-right: 2px;
+}
+.log[open] .log__summary-toggle {
+	transform: rotate(-135deg);
+}
+.log[open] .log__summary {
+	border-bottom: 1px solid var(--line);
+}
+/* The stream itself keeps the dark terminal island — it is literally stdout.
+   Same construction as .terminal on home: --terminal-bg stays dark in both
+   themes, where --ink-strong would invert. */
+.log__body {
+	background: var(--terminal-bg);
+	border-top: 1px solid var(--terminal-edge);
+	color-scheme: dark;
+	padding: 14px 16px;
+	scroll-padding: 14px 16px;
+	font-family: var(--mono);
+	font-size: var(--fs-2);
+	line-height: 1.65;
+	max-height: 260px;
+	overflow: auto;
+}
+.log__line {
+	display: block;
+}
+.log__m {
+	color: var(--terminal-ink);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+.log__empty {
+	color: var(--terminal-ink-faint);
+}
+
+/* sidebar */
+.side {
+	display: grid;
+	gap: 1rem;
+	position: sticky;
+	top: calc(64px + 1rem);
+	align-self: start;
+}
+.artifact {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.55rem 0;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+	border-top: 1px solid var(--line);
+}
+.artifact:first-child {
+	border-top: 0;
+}
+.artifact .ic {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	color: var(--ink-muted);
+	border: 1px solid var(--line);
+	border-radius: var(--r-xs);
+	padding: 0.14rem 0.4rem;
+	background: var(--surface-sunk);
+}
+.artifact.pending {
+	opacity: 0.55;
+}
+.artifact:not(.pending) {
+	color: var(--ink);
+}
+.artifact:not(.pending) .ic {
+	color: var(--signal-ink);
+	border-color: var(--signal-edge);
+	background: var(--signal-wash);
+}
+.side .panel__body--tight {
+	padding-block: 0.35rem 0.55rem;
+}
+
+@media (max-width: 880px) {
+	.grid {
+		grid-template-columns: 1fr;
+	}
+	.side {
+		position: static;
+	}
+	/* The timer sits beside the title instead of in a row of its own, and the
+	   rest of the header runs full width underneath. */
+	.shead {
+		grid-template-columns: minmax(0, 1fr) auto;
+		row-gap: 0;
+	}
+	.shead__main {
+		display: contents;
+	}
+	.shead__main > :not(.shead__id) {
+		grid-column: 1 / -1;
+	}
+	.shead__meta {
+		grid-row: 1;
+		grid-column: 2;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	.timer b {
+		font-size: var(--fs-7);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.meter > i,
+	.ch__bar > i {
+		transition: none;
+	}
+	.meter > i.live::after,
+	.ch--run .ch__led {
+		animation: none;
+	}
+}

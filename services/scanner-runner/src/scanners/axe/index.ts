@@ -1,0 +1,343 @@
+import { axeRuleEvaluations } from '../../core/rule-evaluations';
+import type { Page } from 'playwright';
+
+import AxeBuilder from '@axe-core/playwright';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+
+import {
+	type Issue,
+	type PageScanResult,
+	type ScanContext,
+	ScannerBase,
+	type ScannerMetadata
+} from '../../core';
+import { waitForPageSettled } from '../../core/page-settle';
+import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
+import {
+	AxeScreenshotService,
+	type PageOverviewViolation
+} from '../../screenshots/axe-screenshot-service';
+import { SCANNER_VERSION } from '../version';
+import {
+	getReportableIncompleteResults,
+	mapIncompleteNodeToIssue,
+	mapViolationToIssue
+} from './issue-mapper';
+import {
+	DEFAULT_DYNAMIC_CONTENT_WAIT_MS,
+	LOADING_INDICATOR_WAIT_MS,
+	parseAxeOptions,
+	SCRIPTLESS_FRAME_SELECTOR,
+	withTimeoutFallback,
+	type AxeOptions
+} from './options';
+import type { AxeNode, AxeViolationResult } from './types';
+
+export type { AxeOptions } from './options';
+
+export class AxeScanner extends ScannerBase {
+	readonly metadata: ScannerMetadata = {
+		name: 'axe',
+		version: SCANNER_VERSION,
+		description: 'Accessibility scanner powered by axe-core'
+	};
+
+	private screenshotService: AxeScreenshotService;
+	private options: AxeOptions = {
+		dynamicContentWaitMs: DEFAULT_DYNAMIC_CONTENT_WAIT_MS
+	};
+
+	constructor() {
+		super();
+		this.screenshotService = new AxeScreenshotService();
+	}
+
+	protected override async initialize(): Promise<void> {
+		await super.initialize();
+		this.options = parseAxeOptions(this.config.options);
+		this.logger.info('Axe options', {
+			dynamicContentWaitMs: this.options.dynamicContentWaitMs,
+			disabledRules: this.options.disabledRules,
+			runOnlyTags: this.options.runOnlyTags
+		});
+	}
+
+	/**
+	 * Route-change loading bars (`role="progressbar"`) linger for a few hundred
+	 * milliseconds while they fade out. Catching one mid-fade produced a `region`
+	 * finding on some runs and not others, which churned baselines. A progressbar
+	 * that is still visible after the wait is real page content and gets scanned.
+	 */
+	private async waitForLoadingIndicators(page: ScanContext['page']): Promise<void> {
+		await page
+			.waitForFunction(
+				() =>
+					Array.from(document.querySelectorAll('[role="progressbar"]')).every((el) => {
+						const style = getComputedStyle(el);
+						return (
+							style.display === 'none' ||
+							style.visibility === 'hidden' ||
+							Number(style.opacity) === 0
+						);
+					}),
+				undefined,
+				{ timeout: LOADING_INDICATOR_WAIT_MS }
+			)
+			.catch(() => undefined);
+	}
+
+	async scanPage(context: ScanContext): Promise<PageScanResult> {
+		const { page, pageEntry, resultsDir, logger } = context;
+		const startedAt = new Date().toISOString();
+		const hrStart = process.hrtime.bigint();
+
+		try {
+			await waitForPageSettled(page);
+
+			const waitMs = this.options.dynamicContentWaitMs ?? DEFAULT_DYNAMIC_CONTENT_WAIT_MS;
+			if (waitMs > 0) {
+				await page.waitForTimeout(waitMs);
+			}
+
+			await this.waitForLoadingIndicators(page);
+
+			logger.debug('Running axe-core analysis', {
+				url: pageEntry.url,
+				dynamicContentWaitMs: waitMs
+			});
+
+			let axe = new AxeBuilder({ page }).exclude(SCRIPTLESS_FRAME_SELECTOR);
+
+			// Apply disabled rules if configured
+			if (this.options.disabledRules && this.options.disabledRules.length > 0) {
+				axe = axe.disableRules(this.options.disabledRules);
+			}
+
+			// Apply runOnly tags if configured
+			if (this.options.runOnlyTags && this.options.runOnlyTags.length > 0) {
+				axe = axe.withTags(this.options.runOnlyTags);
+			}
+
+			const axeResults = await axe.analyze();
+
+			logger.info('Axe analysis complete', {
+				url: pageEntry.url,
+				violations: axeResults.violations.length,
+				passes: axeResults.passes.length,
+				incomplete: axeResults.incomplete.length,
+				inapplicable: axeResults.inapplicable.length
+			});
+
+			if (axeResults.violations.length > 0) {
+				logger.info('Axe violations found', {
+					violationIds: axeResults.violations.map((v) => ({
+						id: v.id,
+						impact: v.impact,
+						nodes: v.nodes.length
+					}))
+				});
+			}
+
+			const violations = axeResults.violations as AxeViolationResult[];
+			const reportableIncompleteResults = getReportableIncompleteResults(
+				axeResults.incomplete as AxeViolationResult[]
+			);
+
+			await mkdir(resultsDir, { recursive: true });
+			const screenshotsDir = join(resultsDir, 'screenshots');
+			await mkdir(screenshotsDir, { recursive: true });
+
+			const issues: Issue[] = [];
+
+			// Process violations in parallel batches for better performance
+			const BATCH_SIZE = 5;
+			const ENRICHMENT_TIMEOUT = 5_000;
+
+			const processViolation = async (violation: AxeViolationResult) => {
+				const enrichedNodes = await withTimeoutFallback(
+					this.enrichNodesWithContext(page, violation.nodes ?? []),
+					ENRICHMENT_TIMEOUT,
+					() => [...(violation.nodes ?? [])]
+				);
+				return { violation, enrichedNodes };
+			};
+
+			// Process in batches to avoid overwhelming the browser
+			for (let i = 0; i < violations.length; i += BATCH_SIZE) {
+				const batch = violations.slice(i, i + BATCH_SIZE);
+				const results = await Promise.allSettled(batch.map(processViolation));
+
+				for (const result of results) {
+					if (result.status === 'fulfilled') {
+						const { violation, enrichedNodes } = result.value;
+						const issue = mapViolationToIssue(violation, enrichedNodes, this.metadata.name);
+						issues.push(issue);
+					}
+				}
+			}
+
+			const incompleteIssues = await this.mapIncompleteResultsToIssues(
+				page,
+				reportableIncompleteResults
+			);
+			if (incompleteIssues.length > 0) {
+				logger.info('Axe incomplete results promoted to review issues', {
+					issueCount: incompleteIssues.length,
+					ruleIds: [...new Set(incompleteIssues.map((issue) => issue.id))]
+				});
+				issues.push(...incompleteIssues);
+			}
+
+			// Capture page overview screenshot with all violations highlighted
+			const pageOverviewViolations: PageOverviewViolation[] = [
+				...violations,
+				// Incomplete results are split into one issue per node by mapIncompleteResultsToIssues.
+				// Flatten them into single-node violations here so each gets its own fingerprint,
+				// matching the IDs generated by WebServerFormatter.
+				...reportableIncompleteResults.flatMap((v) => {
+					const nodes = v.nodes ?? [];
+					if (nodes.length <= 1) {
+						return [
+							{
+								id: v.id ?? 'unknown',
+								...(v.impact !== undefined ? { impact: v.impact } : {}),
+								...(v.nodes !== undefined ? { nodes: v.nodes } : {})
+							}
+						];
+					}
+					return nodes.map((node) => ({
+						id: v.id ?? 'unknown',
+						...(v.impact !== undefined ? { impact: v.impact } : {}),
+						nodes: [node]
+					}));
+				})
+			].map((v) => ({
+				id: v.id ?? 'unknown',
+				...(v.impact !== undefined ? { impact: v.impact } : {}),
+				...(v.nodes !== undefined ? { nodes: v.nodes } : {})
+			}));
+
+			const pageOverview = await this.screenshotService.capturePageOverview(
+				page,
+				pageOverviewViolations,
+				screenshotsDir,
+				pageEntry.id,
+				{ scannerId: this.metadata.name }
+			);
+
+			const finishedAt = new Date().toISOString();
+			const durationNs = process.hrtime.bigint() - hrStart;
+			const durationMs = Number(durationNs) / 1e6;
+
+			return {
+				pageId: pageEntry.id,
+				finalUrl: page.url(),
+				rules: axeRuleEvaluations(axeResults, pageEntry.id),
+				url: pageEntry.url,
+				path: pageEntry.path,
+				success: true,
+				issues,
+				durationMs: Math.round(durationMs * 100) / 100,
+				startedAt,
+				finishedAt,
+				artifacts: pageOverview ? [pageOverview.screenshotPath] : [],
+				// Only the overview is read downstream. The full axe output (passes,
+				// inapplicable, node HTML) stayed in memory for every page until the
+				// scan ended, and a 26-page scan hit the container memory limit.
+				rawResults: {
+					pageOverview: pageOverview
+						? {
+								screenshotFilename: pageOverview.screenshotFilename,
+								pageWidth: pageOverview.pageWidth,
+								pageHeight: pageOverview.pageHeight,
+								elements: pageOverview.elements
+							}
+						: null
+				}
+			};
+		} catch (error) {
+			const finishedAt = new Date().toISOString();
+			const durationNs = process.hrtime.bigint() - hrStart;
+			const durationMs = Number(durationNs) / 1e6;
+
+			return {
+				pageId: pageEntry.id,
+				url: pageEntry.url,
+				path: pageEntry.path,
+				success: false,
+				issues: [],
+				durationMs: Math.round(durationMs * 100) / 100,
+				startedAt,
+				finishedAt,
+				error: error instanceof Error ? error.message : String(error)
+			};
+		}
+	}
+
+	private async mapIncompleteResultsToIssues(
+		page: Page,
+		incompleteResults: AxeViolationResult[]
+	): Promise<Issue[]> {
+		const ENRICHMENT_TIMEOUT = 5_000;
+		const issues: Issue[] = [];
+
+		for (const result of incompleteResults) {
+			const nodes = result.nodes ?? [];
+			const enrichedNodes = await withTimeoutFallback(
+				this.enrichNodesWithContext(page, nodes),
+				ENRICHMENT_TIMEOUT,
+				() => [...nodes]
+			);
+			nodes.forEach((node, index) => {
+				issues.push(
+					mapIncompleteNodeToIssue(result, enrichedNodes[index] ?? node, index, this.metadata.name)
+				);
+			});
+		}
+
+		return issues;
+	}
+
+	/**
+	 * Enrich violation nodes with DOM context snippets.
+	 * Extracts contextHtml and ancestorPath for each node (up to 5).
+	 */
+	private async enrichNodesWithContext(page: Page, nodes: AxeNode[]): Promise<AxeNode[]> {
+		const enrichedNodes: AxeNode[] = [];
+
+		// Only process first 5 nodes (same limit as in mapViolationToIssue)
+		const nodesToProcess = nodes.slice(0, 5);
+
+		for (const node of nodesToProcess) {
+			const selector = node.target?.[0];
+			if (!selector) {
+				// No selector to extract context from, keep original node
+				enrichedNodes.push({ ...node });
+				continue;
+			}
+
+			try {
+				const contextResult = await extractContextSnippet(page, selector);
+				enrichedNodes.push({
+					...node,
+					...(contextResult?.contextHtml !== undefined
+						? { contextHtml: contextResult.contextHtml }
+						: {}),
+					...(contextResult?.ancestorPath !== undefined
+						? { ancestorPath: contextResult.ancestorPath }
+						: {})
+				});
+			} catch {
+				// Failed to extract context, keep original node
+				enrichedNodes.push({ ...node });
+			}
+		}
+
+		// Keep every selector for comparison identity; only enrich the first five.
+		return [
+			...enrichedNodes,
+			...nodes.slice(5).map((node) => (node.target ? { target: node.target } : {}))
+		];
+	}
+}

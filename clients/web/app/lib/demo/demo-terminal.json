@@ -1,0 +1,5 @@
+{
+	"command": "stageflow diff baseline.json current.json --fail-on-new=any",
+	"output": "Score: 60 → 57 (-3)\nNew issues: 3\nFixed issues: 1\nUnchanged: 30\n\nNew Issues (Regressions):\n- [serious] Links must have discernible text (axe/link-name)\n  https://sample.stageflow.org/about.html\n  Selector: #careers-link\n- [critical] Select element must have an accessible name (axe/select-name)\n  https://sample.stageflow.org/pricing.html\n  Selector: #billing-cycle\n- [critical] Buttons must have discernible text (axe/button-name)\n  https://sample.stageflow.org/signup.html\n  Selector: #suggest-workspace",
+	"exitCode": 1
+}

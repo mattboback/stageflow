@@ -1,0 +1,276 @@
+/**
+ * Core type definitions for the Scanner Runner (scanner-runner).
+ */
+
+import type { BrowserContext, Page } from 'playwright';
+
+import type { TargetValidationPolicy } from './target-validation';
+
+export interface WaitStrategyLoad {
+	type: 'load';
+}
+
+export interface WaitStrategyDOMContentLoaded {
+	type: 'domcontentloaded';
+}
+
+export interface WaitStrategyNetworkIdle {
+	type: 'networkidle';
+}
+
+export interface WaitStrategySelector {
+	type: 'selector';
+	selector: string;
+	timeout?: number;
+}
+
+export interface WaitStrategyTimeout {
+	type: 'timeout';
+	ms: number;
+}
+
+export type WaitStrategy =
+	| WaitStrategyLoad
+	| WaitStrategyDOMContentLoaded
+	| WaitStrategyNetworkIdle
+	| WaitStrategySelector
+	| WaitStrategyTimeout;
+
+export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: 'load' };
+
+/** Execution receives literal action values resolved by the client. */
+export type PreScanActionValue = string;
+
+export interface ActionClick {
+	type: 'click';
+	selector: string;
+	timeout?: number;
+}
+
+export interface ActionFill {
+	type: 'fill';
+	selector: string;
+	value: PreScanActionValue;
+	timeout?: number;
+}
+
+export interface ActionSelect {
+	type: 'select';
+	selector: string;
+	value: PreScanActionValue;
+	timeout?: number;
+}
+
+export interface ActionHover {
+	type: 'hover';
+	selector: string;
+	timeout?: number;
+}
+
+export interface ActionWait {
+	type: 'wait';
+	ms: number;
+}
+
+export interface ActionScroll {
+	type: 'scroll';
+	selector?: string;
+	direction?: 'up' | 'down';
+	pixels?: number;
+}
+
+export interface ActionKeyboard {
+	type: 'keyboard';
+	key: string;
+}
+
+export type PreScanAction =
+	| ActionClick
+	| ActionFill
+	| ActionSelect
+	| ActionHover
+	| ActionWait
+	| ActionScroll
+	| ActionKeyboard;
+
+export type ProvenanceMode = 'static' | 'spa' | 'live';
+
+export interface PageEntry {
+	id: string;
+	path: string;
+	url: string;
+	wait_for?: WaitStrategy;
+	pre_scan_actions?: PreScanAction[];
+	viewport?: { width: number; height: number };
+	skip?: boolean;
+	metadata?: Record<string, unknown>;
+}
+
+/**
+ * Authentication block carried on Provenance. When absent, the scanner-runner
+ * behaves byte-identically to the pre-auth shape. Discriminated by `mode`.
+ *
+ * - `storage_state`: a Playwright storage-state JSON file mounted read-only at
+ *   /run/stageflow/storage-state.json and copied into private scratch in /tmp.
+ * - `form`: a declarative login replay built from the existing PreScanAction
+ *   shape. `success` is a WaitStrategy that signals a completed login. Any
+ *   string value is a client-resolved literal; credential values never
+ *   appear in public Provenance or the unified report.
+ */
+export interface ProvenanceAuthStorageState {
+	mode: 'storage_state';
+}
+
+export interface ProvenanceAuthForm {
+	mode: 'form';
+	login_url: string;
+	steps: PreScanAction[];
+	success: WaitStrategy;
+}
+
+export type ProvenanceAuth = ProvenanceAuthStorageState | ProvenanceAuthForm;
+
+export interface Provenance {
+	version: string;
+	job_id: string;
+	base_url: string;
+	mode?: ProvenanceMode;
+	default_wait_for?: WaitStrategy;
+	default_viewport?: { width: number; height: number };
+	pages: PageEntry[];
+	auth?: ProvenanceAuth;
+	metadata?: Record<string, unknown>;
+}
+
+export interface BrowserConfig {
+	headless: boolean;
+	args: string[];
+	defaultViewport: { width: number; height: number };
+	deviceScaleFactor: number;
+	defaultTimeout: number;
+	pageLoadTimeout: number;
+	bypassCSP?: boolean;
+}
+
+export interface ScannerConfig {
+	jobId: string;
+	requestId?: string;
+	runId?: string;
+	provenancePath: string;
+	resultsDir: string;
+	scannerName: string;
+	concurrency: number;
+	maxRetries: number;
+	browser: BrowserConfig;
+	options?: Record<string, unknown>;
+}
+
+export type IssueSeverity = 'critical' | 'serious' | 'moderate' | 'minor' | 'info';
+
+export interface IssueLocation {
+	selector?: string;
+	xpath?: string;
+	html?: string;
+	line?: number;
+	column?: number;
+}
+
+export interface Issue {
+	id: string;
+	scanner: string;
+	severity: IssueSeverity;
+	category: string;
+	title: string;
+	description: string;
+	helpUrl?: string;
+	howToFix?: string;
+	location?: IssueLocation;
+	metadata?: Record<string, unknown>;
+}
+
+export interface PageScanResult {
+	finalUrl?: string;
+	rules?: import('@stageflow/contracts-report').RuleEvaluation[];
+	pageId: string;
+	url: string;
+	path?: string;
+	success: boolean;
+	issues: Issue[];
+	durationMs: number;
+	startedAt: string;
+	finishedAt: string;
+	error?: string;
+	retryable?: boolean;
+	artifacts?: string[];
+	rawResults?: unknown;
+}
+
+export interface LighthouseCategorySummary {
+	id: 'performance' | 'accessibility' | 'best-practices' | 'seo' | 'pwa';
+	title: string;
+	avgScore: number;
+}
+
+export interface ScanSummary {
+	totalIssues: number;
+	bySeverity: Record<IssueSeverity, number>;
+	byCategory: Record<string, number>;
+	pagesScanned: number;
+	pagesFailed: number;
+	pagesWithIssues: number;
+	avgDurationMs: number;
+	lighthouseCategories?: LighthouseCategorySummary[];
+}
+
+export interface ScanResults {
+	context?: import('@stageflow/contracts-report').ScanContext;
+	jobId: string;
+	scanner: string;
+	version: string;
+	totalPages: number;
+	pages: PageScanResult[];
+	summary: ScanSummary;
+	startedAt: string;
+	completedAt: string;
+	durationMs: number;
+}
+
+export interface ScanContext {
+	page: Page;
+	context: BrowserContext;
+	pageEntry: PageEntry;
+	resultsDir: string;
+	config: ScannerConfig;
+	logger: ScannerLogger;
+	/** Execution-only masking; never serialized in reports or recipes. */
+	redact?: (value: string) => string;
+	targetValidationPolicy?: TargetValidationPolicy;
+}
+
+export interface ScannerLifecycleHooks {
+	onScanStart?(config: ScannerConfig): Promise<void>;
+	onScanEnd?(results: ScanResults): Promise<void>;
+	onPageStart?(pageEntry: PageEntry): Promise<void>;
+	onPageEnd?(result: PageScanResult): Promise<void>;
+	onError?(error: Error, context?: { pageEntry?: PageEntry }): Promise<void>;
+}
+
+export interface ScannerLogger {
+	info(message: string, meta?: Record<string, unknown>): void;
+	warn(message: string, meta?: Record<string, unknown>): void;
+	error(message: string, meta?: Record<string, unknown>): void;
+	debug(message: string, meta?: Record<string, unknown>): void;
+}
+
+export interface ScanTiming {
+	totalMs: number;
+	pageIterationMs: number;
+	writeResultsMs: number;
+	finalizationMs: number;
+}
+
+export interface ScannerMetadata {
+	name: string;
+	version: string;
+	description?: string;
+}

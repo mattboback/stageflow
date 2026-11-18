@@ -1,0 +1,130 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# clients/web generated artifacts
+/clients/web/.react-router/
+/clients/web/build/
+/clients/web/coverage/
+/clients/web/junit.xml
+
+# Environment files
+.env
+.env.*
+!.env.example
+.npmrc
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+coverage.out
+coverage.html
+.nyc_output/
+*.coverprofile
+/screenshots/
+/qa/evidence/
+/mockups/instrument/
+
+# Temporary / local data
+*.tmp
+.cache/
+/artifacts/
+/.patchright-cli/
+.playwright-mcp/
+.playwright-cli/
+output/
+# Root-only local runtime data (avoid ignoring real source folders named "data")
+/data/
+.go/
+.direnv/
+
+# Generated root-level showcase/demo artifacts
+/cli
+/scan_result.json
+/stageflow-home*.yaml
+/stageflow-report*.yaml
+
+# Generated local CLI artifacts
+/clients/cli/cli
+/clients/cli/report.json
+/clients/cli/stageflow_*.tar.gz
+/clients/cli/stageflow_*.zip
+/sbom-*.spdx.json
+
+# Go build artifacts
+/bin/
+services/platform-api/platform-api
+services/platform-api/platform-api-healthcheck
+services/orchestrator/orchestrator
+services/archive-extractor/extractor
+clients/cli/stageflow
+clients/cli/stageflow-cli
+/.local/
+/platform/
+services/scanner-runner/dist/
+/stageflow
+/stageflow-cli
+
+# Playwright output (clients/web e2e smoke)
+clients/web/test-results/
+clients/web/playwright-report/
+
+# Go build cache
+.gocache/
+**/.gocache/
+
+# Legacy CLI project config (preserve local-only user files)
+.stageflow/
+
+# Host-local SSH authorization backups
+/runner-*-authorized_keys.backup
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.lcov
+junit.xml
+
+# Local databases
+*.db
+*.sqlite*
+*.duckdb
+
+# Editor and OS metadata
+.fleet/
+.history/
+.zed/
+desktop.ini
+._*

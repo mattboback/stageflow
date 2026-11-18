@@ -1,0 +1,74 @@
+# Root .dockerignore for StageFlow build contexts
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Node modules (frontend/scanner)
+**/node_modules
+**/dist
+**/.next
+*.tsbuildinfo
+
+# Tests
+**/test
+**/tests
+**/testdata
+**/*_test.go
+**/*.test.ts
+**/__tests__
+**/coverage
+**/playwright-report
+**/test-results
+
+# Documentation
+*.md
+docs
+
+# Local config
+.env
+.env.*
+*.local
+# Hidden workspace directories are local tooling state.
+.*/**
+.cache
+artifacts
+output
+.patchright-cli
+.playwright-cli
+
+# Logs
+*.log
+
+# CI/CD
+.github
+tests
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build caches and local state
+**/build
+**/.react-router
+**/.venv
+**/venv
+**/__pycache__
+**/*.py[cod]
+**/*.db
+**/*.sqlite*
+**/*.duckdb
+**/*.pem
+**/*.key
+**/.gocache
+.go
+bin/
+**/coverage.xml
+**/junit.xml
+**/*.pid

@@ -1,0 +1,15 @@
+[Unit]
+Description=StageFlow Stack
+Wants=stageflow-pod.service
+Wants=stageflow-postgres.service
+Wants=stageflow-orchestrator.service
+Wants=stageflow-platform-api.service
+Wants=stageflow-frontend-react.service
+After=stageflow-pod.service
+After=stageflow-postgres.service
+After=stageflow-orchestrator.service
+After=stageflow-platform-api.service
+After=stageflow-frontend-react.service
+
+[Install]
+WantedBy=default.target

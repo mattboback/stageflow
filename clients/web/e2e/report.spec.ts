@@ -1,0 +1,517 @@
+import type { Page } from '@playwright/test';
+import { expect, loadReportFixture, test } from './fixtures';
+
+const report = loadReportFixture();
+
+const firstPage = report.pages[0];
+if (!firstPage) {
+	throw new Error('unified-report.v2.all-scans.json must contain at least one page');
+}
+
+// The fixture ships no manual-review findings; add one so the review-next
+// CTA (a queue-driven surface) is exercised. Lighthouse info + no occurrences
+// is the shape getIssueKind treats as manual review.
+report.issues.push({
+	id: 'e2e-manual-review-1',
+	scanner: 'lighthouse',
+	ruleId: 'custom-controls-labels',
+	title: 'Custom controls have associated labels',
+	description: 'Verify that custom interactive controls expose accessible labels.',
+	severity: 'info',
+	pageId: firstPage.id,
+	pageUrl: firstPage.url,
+	elementCount: 0,
+	occurrences: []
+});
+
+// Axe incomplete contrast findings have a concrete element but still require
+// a human decision, so they belong in the same review queue.
+report.issues.push({
+	id: 'e2e-incomplete-contrast-1',
+	scanner: 'axe',
+	ruleId: 'color-contrast',
+	title: 'Elements must have sufficient color contrast',
+	description: 'Verify the rendered text and background colors.',
+	severity: 'serious',
+	pageId: firstPage.id,
+	pageUrl: firstPage.url,
+	elementCount: 1,
+	occurrences: [{ selector: '.hero-copy', html: '<p class="hero-copy">Welcome</p>' }],
+	scannerData: {
+		axeIncomplete: true,
+		contrastData: {
+			fgColor: '#000000',
+			bgColor: '#ffffff',
+			contrastRatio: 21,
+			fontSize: '16px',
+			fontWeight: '400',
+			messageKey: 'bgImage'
+		}
+	}
+});
+
+// Must match meta.jobId inside the fixture — the report hook rejects mismatches.
+const JOB_ID = report.meta.jobId;
+
+const jobStatus = {
+	id: JOB_ID,
+	state: 'done',
+	violations: report.summary.totalIssues,
+	artifacts: {},
+	created_at: '2026-01-01T00:00:00Z',
+	updated_at: '2026-01-01T00:00:12Z'
+};
+
+async function mockReportRoutes(page: Page) {
+	await page.route(`**/api/v1/jobs/${JOB_ID}`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(jobStatus)
+		})
+	);
+	await page.route(`**/api/v1/jobs/${JOB_ID}/results**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(report)
+		})
+	);
+	await page.route(`**/api/v1/jobs/${JOB_ID}/stream**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'text/event-stream',
+			body: 'event: done\ndata: {}\n\n'
+		})
+	);
+}
+
+async function mockScannerCatalog(page: Page) {
+	await page.route('**/api/v1/scanners', (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				scanners: [
+					{
+						id: 'axe',
+						name: 'Axe Accessibility',
+						version: '1.0.0',
+						description: 'WCAG 2.1 rules, powered by axe-core',
+						categories: ['accessibility'],
+						aliases: [],
+						enabled: true,
+						builtIn: true,
+						capabilities: {}
+					}
+				],
+				categories: ['accessibility']
+			})
+		})
+	);
+}
+
+function collectPageErrors(page: Page): string[] {
+	const pageErrors: string[] = [];
+	page.on('pageerror', (err) => {
+		pageErrors.push(String(err));
+	});
+	return pageErrors;
+}
+
+test.describe('public product claims', () => {
+	test('homepage leads with real regressions and a direct URL submission', async ({ page }) => {
+		await page.goto('/');
+		await expect(page.getByRole('heading', { name: /Find what to fix/ })).toBeVisible();
+		await expect(page.getByLabel('URL to scan')).toHaveValue('');
+		await expect(page.getByLabel('URL to scan')).toHaveAttribute(
+			'placeholder',
+			'https://example.com'
+		);
+		await expect(
+			page.getByLabel('Demo report summary').getByText('New in this deploy')
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: /See what changed/ })).toBeVisible();
+		await expect(page.locator('.selfhost')).toHaveCount(0);
+	});
+
+	test('homepage submits the URL and lands on live progress using the mocked API', async ({
+		page
+	}) => {
+		let submitted: Record<string, unknown> | null = null;
+		await page.route('**/api/v1/jobs/urls', async (route) => {
+			submitted = route.request().postDataJSON() as Record<string, unknown>;
+			await route.fulfill({
+				status: 201,
+				contentType: 'application/json',
+				body: JSON.stringify({ job_id: 'home-url-job' })
+			});
+		});
+		await page.route('**/api/v1/jobs/home-url-job', (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					id: 'home-url-job',
+					state: 'scanning',
+					created_at: '2026-09-30T00:00:00Z'
+				})
+			})
+		);
+		await page.route('**/api/v1/jobs/home-url-job/stream**', (route) =>
+			route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': waiting\n\n' })
+		);
+		await page.goto('/');
+		await page.getByLabel('URL to scan').fill('example.com');
+		await page.getByRole('button', { name: 'Scan', exact: true }).click();
+		await expect(page).toHaveURL(/\/scan\/home-url-job$/);
+		expect(submitted).toMatchObject({ urls: ['https://example.com'] });
+	});
+
+	test('privacy is an in-app page, not a GitHub main-branch link', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click();
+		await expect(page).toHaveURL(/\/privacy$/);
+		await expect(page.getByRole('heading', { name: 'Hosted demo privacy' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Retention and access' })).toBeVisible();
+	});
+});
+
+test('report actions can save locally and delete the hosted job', async ({ page, context }) => {
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await mockReportRoutes(page);
+	await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
+		if (route.request().method() === 'DELETE') {
+			await route.fulfill({ status: 204 });
+			return;
+		}
+		await route.fallback();
+	});
+
+	await page.goto(`/scan/${JOB_ID}/report`);
+	await page.getByRole('button', { name: 'Copy share link' }).click();
+	await expect(page.getByRole('button', { name: 'Link copied' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Save in this browser' }).click();
+	await expect(page.getByText(/Saved in this browser/)).toBeVisible();
+
+	await page.getByRole('button', { name: 'Delete this scan' }).click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.getByText(/durable job record is not erased/)).toBeVisible();
+	await dialog.getByRole('button', { name: 'Delete scan' }).click();
+	await expect(page).toHaveURL('/');
+});
+
+test.describe('delete conflict', () => {
+	test.use({ allowedBrowserErrors: [/status of 409 \(Conflict\)/] });
+
+	test('delete stays on the report when the job is still running', async ({ page }) => {
+		await mockReportRoutes(page);
+		await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
+			if (route.request().method() === 'DELETE') {
+				await route.fulfill({
+					status: 409,
+					contentType: 'application/json',
+					body: JSON.stringify({ message: 'This scan is still running.' })
+				});
+				return;
+			}
+			await route.fallback();
+		});
+
+		await page.goto(`/scan/${JOB_ID}/report`);
+		await page.getByRole('button', { name: 'Delete this scan' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Delete scan' }).click();
+		await expect(page.getByRole('alert')).toHaveText(/still running/i);
+		await expect(page).toHaveURL(new RegExp(`/scan/${JOB_ID}/report`));
+	});
+});
+
+test('report page renders the fixture report end to end', async ({ page }) => {
+	await mockReportRoutes(page);
+	const pageErrors = collectPageErrors(page);
+
+	await page.goto(`/scan/${JOB_ID}/report?section=overview`);
+
+	// Header: host from baseUrl (Daylight Gauge redesign) plus compact stats.
+	const host = new URL(report.meta.baseUrl as string).host;
+	const totals = page.getByLabel('Scan totals');
+	await expect(page.getByRole('heading', { name: host })).toBeVisible();
+	const pagesScanned = report.summary.pagesScanned;
+	await expect(
+		totals.getByText(
+			`${pagesScanned.toLocaleString()} ${pagesScanned === 1 ? 'page' : 'pages'} scanned · ${report.summary.pagesWithIssues.toLocaleString()} with findings`
+		)
+	).toBeVisible();
+	await expect(totals.getByText('Human review')).toHaveCount(0);
+
+	// Review landing: review-next CTA, filter toolbar, three-panel visual review.
+	await expect(page.getByText(/findings need review|findings reviewed/)).toBeVisible();
+	// The severity legend is text, and each entry filters Findings.
+	await expect(totals.getByRole('button', { name: /^\d+ critical$/ })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Pages', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Findings on this page' })).toBeVisible();
+
+	expect(pageErrors).toEqual([]);
+});
+
+test('review queue records contrast and generic human decisions', async ({ page }) => {
+	await mockReportRoutes(page);
+	await page.goto(`/scan/${JOB_ID}/report`);
+
+	await page.getByRole('button', { name: /Review human checks/ }).click();
+	await expect(page.getByRole('tab', { name: 'Verify' })).toHaveAttribute('aria-selected', 'true');
+	await page.getByRole('button', { name: 'Mark pass' }).click();
+
+	await page.getByRole('button', { name: 'Next issue (j)' }).click();
+	await expect(
+		page.getByRole('dialog').getByRole('tab', { name: 'Review', exact: true })
+	).toHaveAttribute('aria-selected', 'true');
+	await page.getByRole('button', { name: 'Mark pass' }).click();
+	await page.getByRole('button', { name: 'Close modal' }).click();
+
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
+	const totals = page.getByLabel('Scan totals');
+	await expect(totals.getByText('Human review')).toHaveCount(0);
+	await expect(totals.getByText(/need a human check/)).toHaveCount(0);
+	await expect(page.getByText('needs review', { exact: true })).toHaveCount(0);
+	// This fixture has no screenshot pins; its findings live in the page-level tab.
+	await page.getByRole('tab', { name: /^Page-level/ }).click();
+	// Both reviewed findings are attached to the selected page.
+	await expect(page.getByText('reviewed · pass', { exact: true })).toHaveCount(2);
+});
+
+test('review decisions synchronize without loss across browser tabs', async ({ context, page }) => {
+	const otherPage = await context.newPage();
+	await mockReportRoutes(page);
+	await mockReportRoutes(otherPage);
+	await Promise.all([
+		page.goto(`/scan/${JOB_ID}/report`),
+		otherPage.goto(`/scan/${JOB_ID}/report`)
+	]);
+
+	await page.getByRole('button', { name: /Review human checks/ }).click();
+	await page.getByRole('button', { name: 'Mark pass' }).click();
+	await page.getByRole('button', { name: 'Close modal' }).click();
+
+	await expect(otherPage.getByText('1 of 2 findings still need review')).toBeVisible();
+	await otherPage.getByRole('button', { name: /Continue review/ }).click();
+	await expect(
+		otherPage.getByRole('dialog').getByRole('tab', { name: 'Review', exact: true })
+	).toHaveAttribute('aria-selected', 'true');
+	await otherPage.getByRole('button', { name: 'Mark fail' }).click();
+	await otherPage.getByRole('button', { name: 'Close modal' }).click();
+
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
+	await page.reload();
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
+});
+
+test('headers keep all three theme choices usable at narrow widths', async ({ page }) => {
+	await mockReportRoutes(page);
+	for (const path of [`/scan/${JOB_ID}/report`, '/']) {
+		await page.goto(path);
+		const header = page.getByRole('banner');
+		const isReport = path !== '/';
+		await expect(header.getByRole('link', { name: 'StageFlow home' })).toBeVisible();
+		// Wait for the fixture-backed report to replace the prerendered shell.
+		if (isReport)
+			await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+
+		for (const width of [320, 375, 380, 381, 384, 390, 480, 481, 640, 641, 768, 800, 960, 1440]) {
+			await page.setViewportSize({ width, height: 844 });
+			await expect(header.getByRole('radio')).toHaveCount(3);
+			for (const name of ['Light', 'Dark', 'System']) {
+				const radio = header.getByRole('radio', { name, exact: true });
+				await expect(radio).toBeVisible();
+				const geometry = await radio.evaluate((input) => {
+					const control = input.getBoundingClientRect();
+					const icon = input.closest('label')?.querySelector('svg')?.getBoundingClientRect();
+					return {
+						left: control.left,
+						right: control.right,
+						width: control.width,
+						height: control.height,
+						iconWidth: icon?.width ?? 0,
+						iconHeight: icon?.height ?? 0,
+						viewportWidth: document.documentElement.clientWidth
+					};
+				});
+				expect(geometry.iconWidth, `${name} icon at ${width}px`).toBeGreaterThan(0);
+				expect(geometry.iconHeight, `${name} icon at ${width}px`).toBeGreaterThan(0);
+				expect(geometry.left).toBeGreaterThanOrEqual(0);
+				expect(geometry.right).toBeLessThanOrEqual(geometry.viewportWidth);
+				if (width <= 640) {
+					expect(geometry.width, `${name} touch target at ${width}px`).toBeGreaterThanOrEqual(44);
+					expect(geometry.height).toBeGreaterThanOrEqual(44);
+				}
+			}
+
+			const controls = [header.getByRole('link', { name: 'StageFlow home' })];
+			if (isReport) controls.push(header.getByRole('link', { name: 'Scan status' }));
+			else if (width <= 960) controls.push(header.getByRole('button', { name: 'Menu' }));
+			const headerWidth = await page.evaluate(() => document.documentElement.clientWidth);
+			for (const control of controls) {
+				await expect(control).toBeVisible();
+				const bounds = await control.boundingBox();
+				expect(bounds).not.toBeNull();
+				expect(bounds!.x).toBeGreaterThanOrEqual(0);
+				expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(headerWidth);
+				if (width <= 640) expect(bounds!.height).toBeGreaterThanOrEqual(44);
+			}
+			const wordmark = header.getByText('StageFlow', { exact: true });
+			if (width > (isReport ? 480 : 380)) await expect(wordmark).toBeVisible();
+			else await expect(wordmark).toBeHidden();
+			expect(
+				await page.evaluate(
+					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+				),
+				`horizontal overflow at ${width}px`
+			).toBe(0);
+
+			if (isReport && width === 390) {
+				for (const [name, theme] of [
+					['Dark', 'dark'],
+					['Light', 'light'],
+					['System', null]
+				] as const) {
+					const radio = header.getByRole('radio', { name, exact: true });
+					await radio.click();
+					await expect(radio).toBeChecked();
+					if (theme === null) await expect(page.locator('html')).not.toHaveAttribute('data-theme');
+					else await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+				}
+			}
+		}
+	}
+});
+
+test.describe('mobile report (390×844)', () => {
+	test.use({ viewport: { width: 390, height: 844 } });
+
+	test('review tab leads with confirmed fixes and keeps human checks secondary', async ({
+		page
+	}) => {
+		await mockReportRoutes(page);
+		const pageErrors = collectPageErrors(page);
+
+		await page.goto(`/scan/${JOB_ID}/report`);
+
+		await expect(page.getByText(/findings need review/)).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+		await expect(page.getByRole('button', { name: /Review human checks/ })).toBeVisible();
+
+		expect(pageErrors).toEqual([]);
+	});
+
+	test('findings tab uses a filter sheet instead of a sidebar', async ({ page }) => {
+		await mockReportRoutes(page);
+
+		await page.goto(`/scan/${JOB_ID}/report?section=issues`);
+
+		// The sidebar is hidden behind the Filters button on small screens.
+		const filtersBtn = page.getByRole('button', { name: /^Filters/ });
+		await expect(filtersBtn).toBeVisible();
+		await expect(page.getByLabel('Finding filters')).toBeHidden();
+
+		await filtersBtn.click();
+		await expect(page.getByLabel('Finding filters')).toBeVisible();
+		await page.getByRole('button', { name: /Show \d+ finding/ }).click();
+		await expect(page.getByLabel('Finding filters')).toBeHidden();
+	});
+});
+
+test.describe('mobile configure page (390×844)', () => {
+	test.use({ viewport: { width: 390, height: 844 } });
+
+	test('exactly one Run button, in the sticky action bar', async ({ page }) => {
+		await mockScannerCatalog(page);
+
+		await page.goto('/playground');
+
+		// Hidden buttons drop out of the accessibility tree, so exactly one
+		// Run button being resolvable means exactly one is offered.
+		const runButtons = page.getByRole('button', { name: /Run scan/ });
+		await expect(runButtons).toHaveCount(1);
+		await expect(
+			page.locator('.stickyrun').getByRole('button', { name: /Run scan/ })
+		).toBeVisible();
+	});
+
+	test('hidden incomplete URL auth does not block a ZIP scan', async ({ page }) => {
+		await mockScannerCatalog(page);
+		await page.route('**/api/v1/jobs/zip', (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ job_id: 'zip-job-1' })
+			})
+		);
+
+		await page.goto('/playground');
+		await page.getByRole('button', { name: 'Set up' }).click();
+		await page.getByRole('button', { name: 'ZIP upload' }).click();
+		await page.locator('input[type="file"]').setInputFiles({
+			name: 'site.zip',
+			mimeType: 'application/zip',
+			buffer: Buffer.from('zip fixture')
+		});
+
+		const submitted = page.waitForRequest(
+			(request) => request.method() === 'POST' && request.url().endsWith('/api/v1/jobs/zip')
+		);
+		await page
+			.locator('.stickyrun')
+			.getByRole('button', { name: /Run scan/ })
+			.click();
+		await submitted;
+	});
+});
+
+test('a zero-finding report celebrates the all-clear instead of an empty queue', async ({
+	page
+}) => {
+	const cleanReport = loadReportFixture();
+	const CLEAN_JOB_ID = 'e2e-clean-run';
+	cleanReport.meta.jobId = CLEAN_JOB_ID;
+	cleanReport.issues = [];
+	cleanReport.scanners = cleanReport.scanners.map((scanner) => ({ ...scanner, status: 'success' }));
+	cleanReport.errors = [];
+	cleanReport.summary.totalIssues = 0;
+	cleanReport.summary.pagesWithIssues = 0;
+	cleanReport.summary.score = 100;
+	cleanReport.summary.bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
+
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ ...jobStatus, id: CLEAN_JOB_ID, violations: 0 })
+		})
+	);
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}/results**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(cleanReport)
+		})
+	);
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}/stream**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'text/event-stream',
+			body: 'event: done\ndata: {}\n\n'
+		})
+	);
+
+	await page.goto(`/scan/${CLEAN_JOB_ID}/report`);
+
+	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
+	const totals = page.getByLabel('Scan totals');
+	await expect(totals.getByText('0 occurrences')).toBeVisible();
+	await expect(totals.getByText('nothing to fix')).toBeVisible();
+	await expect(
+		page.locator('.allclear').getByRole('link', { name: /Save this as a local baseline/ })
+	).toBeVisible();
+	await expect(page.getByText(/findings need review/)).toHaveCount(0);
+});

@@ -1,0 +1,11 @@
+{
+	"version": "1.0.0",
+	"job_id": "job-no-auth",
+	"base_url": "https://example.com",
+	"mode": "static",
+	"default_wait_for": { "type": "load" },
+	"pages": [
+		{ "id": "home", "path": "/", "url": "https://example.com/" },
+		{ "id": "about", "path": "/about", "url": "https://example.com/about" }
+	]
+}

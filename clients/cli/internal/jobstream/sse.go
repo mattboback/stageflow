@@ -1,0 +1,393 @@
+package jobstream
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+)
+
+const (
+	jobStatePending = "PENDING"
+	jobStateDone    = "DONE"
+	jobStateFailed  = "FAILED"
+)
+
+// scanTiming is the scanner timing in a stream update; the API sends only the total.
+type scanTiming struct {
+	TotalMs int64 `json:"total_ms"`
+}
+
+type jobStreamUpdate struct {
+	Type          string      `json:"type"`
+	State         string      `json:"state"`
+	QueuePosition *int        `json:"queue_position,omitempty"`
+	Event         string      `json:"event,omitempty"` // For printing progress
+	ScannerType   string      `json:"scanner_type,omitempty"`
+	PagesScanned  *int        `json:"pages_scanned,omitempty"`
+	Violations    *int        `json:"violations,omitempty"`
+	Timing        *scanTiming `json:"timing,omitempty"`
+}
+
+type streamState struct {
+	lastState         string
+	lastQueuePosition int
+	seenCompleted     map[string]struct{}
+	remainingScanners []string
+}
+
+func newStreamState() *streamState {
+	return &streamState{
+		lastQueuePosition: -1,
+		seenCompleted:     make(map[string]struct{}),
+	}
+}
+
+func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
+	apiPath := fmt.Sprintf("/api/v1/jobs/%s/stream", url.PathEscape(jobID))
+
+	reqURL, err := c.BuildURL(apiPath)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL.String(), http.NoBody)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return fmt.Errorf("stream failed: %w", err)
+	}
+
+	defer func() {
+		if drainErr := drainAndCloseResponseBody(resp.Body); drainErr != nil {
+			return
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("stream failed (%d): %s", resp.StatusCode, http.StatusText(resp.StatusCode))
+	}
+
+	reader := bufio.NewReaderSize(resp.Body, 1024*1024)
+
+	return consumeSSEUpdates(ctx, reader, out)
+}
+
+func drainAndCloseResponseBody(body io.ReadCloser) error {
+	_, copyErr := io.Copy(io.Discard, body)
+	closeErr := body.Close()
+
+	if copyErr != nil {
+		return copyErr
+	}
+
+	return closeErr
+}
+
+func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {
+	var dataLines []string
+
+	for {
+		line, readErr := r.ReadString('\n')
+		if readErr != nil {
+			return "", "", readErr
+		}
+
+		line = strings.TrimRight(line, "\r\n")
+		if line == "" {
+			return eventType, strings.Join(dataLines, "\n"), nil
+		}
+
+		if strings.HasPrefix(line, ":") { // SSE comment / keepalive
+			continue
+		}
+
+		if strings.HasPrefix(line, "event:") {
+			eventType = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+			continue
+		}
+
+		if strings.HasPrefix(line, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+			continue
+		}
+	}
+}
+
+func isTerminalState(state string) bool {
+	return state == jobStateDone || state == jobStateFailed
+}
+
+func consumeSSEUpdates(ctx context.Context, reader *bufio.Reader, out io.Writer) error {
+	state := newStreamState()
+
+	for {
+		eventType, data, readErr := readNextSSEEvent(reader)
+		if readErr != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			// Connection drop during SSE could force a polling fallback in a highly robust client,
+			// but for this MVP, we return the error.
+			return fmt.Errorf("read stream error: %w", readErr)
+		}
+
+		done, err := handleSSEEvent(eventType, data, out, state)
+		if err != nil {
+			return err
+		}
+
+		if done {
+			return nil
+		}
+	}
+}
+
+func handleSSEEvent(eventType, data string, out io.Writer, state *streamState) (bool, error) {
+	switch eventType {
+	case "status":
+		return handleStatusEvent(data, out, state)
+	case "done":
+		return true, nil
+	case "update":
+		return handleUpdateEvent(data, out, state)
+	default:
+		return false, nil
+	}
+}
+
+func isTerminalEvent(eventType string) bool {
+	return eventType == "complete" || eventType == "failed"
+}
+
+func parseJobStreamUpdate(data string) (jobStreamUpdate, bool) {
+	var update jobStreamUpdate
+
+	if err := json.Unmarshal([]byte(data), &update); err != nil {
+		return jobStreamUpdate{}, false
+	}
+
+	return update, true
+}
+
+func parseJobStatus(data string) (apiclient.JobStatus, bool) {
+	var status apiclient.JobStatus
+
+	if err := json.Unmarshal([]byte(data), &status); err != nil {
+		return apiclient.JobStatus{}, false
+	}
+
+	return status, true
+}
+
+func handleStatusEvent(data string, out io.Writer, state *streamState) (bool, error) {
+	status, ok := parseJobStatus(data)
+	if !ok {
+		return false, nil
+	}
+
+	return emitStatusSnapshot(out, state, &status)
+}
+
+func handleUpdateEvent(data string, out io.Writer, state *streamState) (bool, error) {
+	update, ok := parseJobStreamUpdate(data)
+	if !ok {
+		return false, nil
+	}
+
+	if err := emitUpdateEvent(out, state, update); err != nil {
+		return false, err
+	}
+
+	return isTerminalState(update.State) || isTerminalEvent(update.Type), nil
+}
+
+func emitStatusSnapshot(out io.Writer, state *streamState, status *apiclient.JobStatus) (bool, error) {
+	if err := emitScannerCompletionsFromStatus(out, state, status); err != nil {
+		return false, err
+	}
+
+	if err := emitStateTransition(out, state, status.State); err != nil {
+		return false, err
+	}
+
+	if status.State == jobStatePending && status.QueuePosition != nil {
+		if err := emitQueuePosition(out, state, *status.QueuePosition); err != nil {
+			return false, err
+		}
+	}
+
+	return isTerminalState(status.State), nil
+}
+
+func emitUpdateEvent(out io.Writer, state *streamState, update jobStreamUpdate) error {
+	if update.Type == "scanner_complete" && update.ScannerType != "" {
+		remaining := state.markScannerComplete(update.ScannerType)
+
+		if _, err := fmt.Fprintln(out, formatScannerCompletion(update, remaining)); err != nil {
+			return err
+		}
+	}
+
+	if err := emitStateTransition(out, state, update.State); err != nil {
+		return err
+	}
+
+	if update.Type == "queue" && update.QueuePosition != nil {
+		return emitQueuePosition(out, state, *update.QueuePosition)
+	}
+
+	return nil
+}
+
+// emitQueuePosition prints how many jobs start first, once per change.
+func emitQueuePosition(out io.Writer, state *streamState, position int) error {
+	if position == state.lastQueuePosition {
+		return nil
+	}
+
+	state.lastQueuePosition = position
+
+	if position == 0 {
+		_, err := fmt.Fprintln(out, "queue: next in line")
+
+		return err
+	}
+
+	_, err := fmt.Fprintf(out, "queue: %d ahead\n", position)
+
+	return err
+}
+
+func emitStateTransition(out io.Writer, state *streamState, nextState string) error {
+	if nextState == "" || nextState == state.lastState {
+		return nil
+	}
+
+	state.lastState = nextState
+
+	_, err := fmt.Fprintf(out, "state: %s\n", nextState)
+
+	return err
+}
+
+func emitScannerCompletionsFromStatus(out io.Writer, state *streamState, status *apiclient.JobStatus) error {
+	if status == nil {
+		return nil
+	}
+
+	state.remainingScanners = cloneStrings(status.RemainingScanners)
+
+	for _, scannerType := range status.CompletedScanners {
+		if scannerType == "" {
+			continue
+		}
+
+		if _, seen := state.seenCompleted[scannerType]; seen {
+			continue
+		}
+
+		state.seenCompleted[scannerType] = struct{}{}
+
+		if _, err := fmt.Fprintln(
+			out,
+			formatStatusScannerCompletion(scannerType, state.remainingScanners),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *streamState) markScannerComplete(scannerType string) []string {
+	if s == nil || scannerType == "" {
+		return nil
+	}
+
+	s.seenCompleted[scannerType] = struct{}{}
+	if len(s.remainingScanners) == 0 {
+		return nil
+	}
+
+	next := make([]string, 0, len(s.remainingScanners))
+	for _, candidate := range s.remainingScanners {
+		if candidate == scannerType || candidate == "" {
+			continue
+		}
+
+		next = append(next, candidate)
+	}
+
+	s.remainingScanners = next
+
+	return cloneStrings(next)
+}
+
+func cloneStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+
+	return cloned
+}
+
+func formatStatusScannerCompletion(scannerType string, remaining []string) string {
+	return formatScannerCompletion(jobStreamUpdate{ScannerType: scannerType}, remaining)
+}
+
+func formatScannerCompletion(update jobStreamUpdate, remaining []string) string {
+	details := make([]string, 0, 3)
+	if update.Timing != nil && update.Timing.TotalMs > 0 {
+		details = append(details, formatDurationMs(update.Timing.TotalMs))
+	}
+
+	if update.PagesScanned != nil {
+		details = append(details, fmt.Sprintf("%d page%s", *update.PagesScanned, pluralize(*update.PagesScanned)))
+	}
+
+	if update.Violations != nil {
+		details = append(details, fmt.Sprintf("%d issue%s", *update.Violations, pluralize(*update.Violations)))
+	}
+
+	message := fmt.Sprintf("scanner: %s complete", update.ScannerType)
+	if len(details) > 0 {
+		message = fmt.Sprintf("%s (%s)", message, strings.Join(details, ", "))
+	}
+
+	switch {
+	case len(remaining) == 0:
+		return message + "; remaining: none"
+	case len(remaining) == 1:
+		return fmt.Sprintf("%s; remaining: %s", message, remaining[0])
+	default:
+		return fmt.Sprintf("%s; remaining: %s", message, strings.Join(remaining, ", "))
+	}
+}
+
+func formatDurationMs(durationMs int64) string {
+	return fmt.Sprintf("%.1fs", float64(durationMs)/1000)
+}
+
+func pluralize(value int) string {
+	if value == 1 {
+		return ""
+	}
+
+	return "s"
+}

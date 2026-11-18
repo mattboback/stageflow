@@ -1,0 +1,158 @@
+import { DEMO_SUMMARY } from '../app/lib/demo/demo-summary';
+import { expect, test } from './fixtures';
+
+const SITE_URL = (process.env.VITE_SITE_URL || 'https://stageflow.org').replace(/\/$/, '');
+const SHARE_IMAGE_URL = `${SITE_URL}/social/stageflow-og.png`;
+
+/*
+ * The only spec that runs against real data with nothing mocked.
+ *
+ * Every other spec routes the API and feeds it the contract fixture, which
+ * proves the components work on a shape. This proves the shape the generator
+ * actually produces still drives them -- and it is the route a visitor
+ * lands on, so a regression here is the one that matters most.
+ */
+test.describe('the demo report', () => {
+	test('prerenders metadata and keeps it after client navigation', async ({ page }) => {
+		const response = await page.request.get('/demo');
+		expect(response.ok()).toBe(true);
+		const html = await response.text();
+		const metadata = await page.evaluate((html) => {
+			const head = new DOMParser().parseFromString(html, 'text/html').head;
+			return {
+				canonical: [...head.querySelectorAll('link[rel="canonical"]')].map((link) =>
+					link.getAttribute('href')
+				),
+				title: head.querySelector('meta[property="og:title"]')?.getAttribute('content'),
+				description: head.querySelector('meta[property="og:description"]')?.getAttribute('content'),
+				image: head.querySelector('meta[property="og:image"]')?.getAttribute('content')
+			};
+		}, html);
+		expect(metadata.canonical).toEqual([`${SITE_URL}/demo`]);
+		expect(metadata.title).toBe('Live report demo — StageFlow');
+		expect(metadata.description).toContain('explore without running a scan');
+		expect(metadata.image).toBe(SHARE_IMAGE_URL);
+		const image = await page.request.get(new URL(SHARE_IMAGE_URL).pathname);
+		expect(image.ok()).toBe(true);
+		expect(image.headers()['content-type']).toContain('image/png');
+
+		await page.goto('/');
+		await page.getByRole('link', { name: /See what changed/ }).click();
+		await expect(page).toHaveURL(/\/demo$/);
+		await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+		await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/demo`);
+		await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+			'content',
+			'Live report demo — StageFlow'
+		);
+		await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
+			'content',
+			metadata.description ?? ''
+		);
+		await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+			'content',
+			SHARE_IMAGE_URL
+		);
+	});
+
+	test('shows the fixture address as an example, not a live destination', async ({ page }) => {
+		await page.goto('/demo');
+		await expect(page.locator('.rhead__url')).toHaveText(
+			'Example site · https://sample.stageflow.org'
+		);
+		await expect(page.locator('a[href^="https://sample.stageflow.org"]')).toHaveCount(0);
+	});
+
+	test('opens from the home page and renders a real scan', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: /See what changed/ }).click();
+
+		await expect(page).toHaveURL(/\/demo$/);
+		await expect(
+			page.getByRole('heading', { level: 1, name: 'sample.stageflow.org' })
+		).toBeVisible();
+		// Findings, not "no findings" -- the empty branch is the failure mode.
+		await expect(page.getByRole('tab', { name: /Findings/ })).toBeVisible();
+		await expect(page.getByRole('tab', { name: /Artifacts/ })).toBeVisible();
+	});
+
+	test('the page index leads into visual review for that page', async ({ page }) => {
+		await page.goto('/demo');
+
+		await page.getByRole('tab', { name: /Pages/ }).click();
+		const cards = page.getByRole('button', { name: /^Review .+, \d+ findings?\b/ });
+		await expect(cards.first()).toBeVisible();
+		// The tab only exists above one page; a single-page report resolves it
+		// back to review, so this also pins the fixture at more than one page.
+		expect(await cards.count()).toBeGreaterThan(1);
+
+		await cards.first().click();
+		await expect(page).toHaveURL(/[?&]page=/);
+		await expect(page.getByRole('heading', { name: 'Findings on this page' })).toBeVisible();
+	});
+
+	test('the next-finding control walks the markers on the screenshot', async ({ page }) => {
+		await page.goto('/demo');
+
+		const next = page.getByRole('button', { name: /Next finding on this page/ });
+		await expect(next).toBeVisible();
+
+		// NEW markers are already emphasized; the selected marker has its own state.
+		const active = page.locator('.vrev__marker--active');
+		await expect(active).toHaveCount(0);
+		await next.click();
+		await expect(active).toHaveCount(1);
+		// Strokes are in screen pixels (non-scaling), so this holds at every zoom.
+		await expect(active).toHaveAttribute('stroke-width', '3');
+	});
+
+	test('prerenders the real comparison and exposes NEW filters and findings', async ({ page }) => {
+		const response = await page.request.get('/demo');
+		const html = await response.text();
+		expect(html).toContain('New in this deploy');
+		expect(html).not.toContain('Loading demo report');
+		await page.goto('/demo');
+		const changes = page.locator('.baseline-diff');
+		await expect(changes.getByText('New in this deploy')).toBeVisible();
+		await expect(changes.getByRole('heading')).toContainText(
+			`${DEMO_SUMMARY.newIssues} new · ${DEMO_SUMMARY.fixedIssues} fixed`
+		);
+		await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+		await expect(page.locator('.vrev__marker--new').first()).toBeVisible();
+		await page.getByRole('tab', { name: /Findings/ }).click();
+		const filter = page.getByRole('checkbox', { name: 'New in this deploy' });
+		await filter.click();
+		await expect(filter).toBeChecked();
+		await expect(page).toHaveURL(/[?&]new=1/);
+		await expect(page.locator('.irow, .igroup').first()).toContainText('NEW');
+	});
+
+	test('the home page crop opens the new finding from the real comparison', async ({ page }) => {
+		await page.goto('/');
+		const crop = page.locator('.preview__evidence');
+		await expect(crop.getByText('NEW', { exact: true })).toBeVisible();
+		await expect(
+			crop.getByRole('img', { name: 'Evidence: Select element must have an accessible name' })
+		).toBeVisible();
+		await expect(crop).not.toContainText('Links must have discernible text');
+		await crop.click();
+		await expect(page).toHaveURL(/\/demo\?section=issues&issue=/);
+		const dialog = page.getByRole('dialog', { name: 'Issue details' });
+		await expect(dialog).toBeVisible();
+		await expect(
+			dialog.getByRole('heading', { name: 'Select element must have an accessible name' })
+		).toBeVisible();
+		await dialog.getByRole('tab', { name: 'Evidence' }).click();
+		await expect(dialog).toContainText('#billing-cycle');
+		await expect(dialog).not.toContainText('#careers-link');
+	});
+
+	test('serves the fixture it claims to render', async ({ page }) => {
+		const response = await page.request.get('/demo/report.json');
+		expect(response.ok()).toBe(true);
+
+		const report = (await response.json()) as { meta: { jobId: string }; issues: unknown[] };
+		expect(report.meta.jobId).toBe('demo');
+		expect(report.issues.length).toBeGreaterThan(0);
+	});
+});

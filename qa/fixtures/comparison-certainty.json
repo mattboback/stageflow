@@ -1,0 +1,414 @@
+{
+  "baseline": {
+    "version": "2.0.0",
+    "meta": {
+      "jobId": "original-job",
+      "baseUrl": "http://localhost:8080",
+      "scannedAt": "2025-12-22T00:00:00Z",
+      "completedAt": "2025-12-22T00:00:12Z",
+      "durationMs": 12000,
+      "scanContext": {
+        "expectedPages": [
+          "page-v2-home"
+        ],
+        "identityScope": "path",
+        "scannerConfigFingerprints": {
+          "axe": "settings"
+        },
+        "pageConfigFingerprints": {
+          "page-v2-home": "page-settings"
+        },
+        "scannerConfigurations": {
+          "axe": {}
+        },
+        "verificationEligiblePages": {
+          "page-v2-home": true
+        },
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "purpose": "full",
+        "authenticated": false,
+        "inputType": "urls"
+      }
+    },
+    "summary": {
+      "score": 70,
+      "scoreGrade": "B",
+      "totalIssues": 1,
+      "bySeverity": {
+        "critical": 1,
+        "serious": 2,
+        "moderate": 3,
+        "minor": 1,
+        "info": 0
+      },
+      "byScanner": {
+        "axe": 3,
+        "lighthouse": 1,
+        "link-checker": 1,
+        "security-headers": 1,
+        "seo": 1
+      },
+      "pagesScanned": 2,
+      "pagesWithIssues": 2,
+      "lighthouseCategories": [
+        {
+          "id": "performance",
+          "title": "Performance",
+          "avgScore": 0.73
+        },
+        {
+          "id": "accessibility",
+          "title": "Accessibility",
+          "avgScore": 0.89
+        },
+        {
+          "id": "best-practices",
+          "title": "Best Practices",
+          "avgScore": 0.92
+        },
+        {
+          "id": "seo",
+          "title": "SEO",
+          "avgScore": 0.83
+        }
+      ]
+    },
+    "scanners": [
+      {
+        "id": "axe",
+        "name": "Axe",
+        "status": "success",
+        "toolVersion": "1.0",
+        "pages": [
+          {
+            "pageId": "page-v2-home",
+            "status": "success",
+            "finalUrl": "https://example.com/",
+            "rules": [
+              {
+                "ruleId": "image-alt",
+                "outcome": "fail",
+                "subjectIds": [
+                  "occ-v2-original"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "pages": [
+      {
+        "id": "page-v2-home",
+        "url": "https://example.com/",
+        "path": "/index.html",
+        "issueCount": 5,
+        "bySeverity": {
+          "critical": 1,
+          "serious": 2,
+          "moderate": 1,
+          "minor": 1,
+          "info": 0
+        },
+        "durationMs": 6500,
+        "startedAt": "2025-12-22T00:00:00Z",
+        "finishedAt": "2025-12-22T00:00:06Z"
+      }
+    ],
+    "issues": [
+      {
+        "id": "original",
+        "scanner": "axe",
+        "ruleId": "image-alt",
+        "title": "Missing alt",
+        "description": "Add alternative text",
+        "severity": "serious",
+        "pageId": "page-v2-home",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "occurrences": [
+          {
+            "elementId": "occ-v2-original",
+            "selector": "img",
+            "html": "<img>"
+          }
+        ]
+      }
+    ],
+    "artifacts": [
+      {
+        "id": "ss-axe-color-contrast-page-1",
+        "type": "screenshot",
+        "path": "job-123/screenshots/axe-color-contrast-page-1.png",
+        "mime": "image/png"
+      }
+    ],
+    "errors": []
+  },
+  "cases": [
+    {
+      "name": "rule passes",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 1,
+        "unchanged": 0,
+        "new": 0,
+        "limited": false,
+        "verification": "fixed"
+      }
+    },
+    {
+      "name": "rule becomes inapplicable",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "inapplicable"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 1,
+        "unchanged": 0,
+        "new": 0,
+        "limited": false,
+        "verification": "fixed"
+      }
+    },
+    {
+      "name": "incomplete is not a fix",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "incomplete",
+          "subjectIds": [
+            "occ-v2-original"
+          ]
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "needs-review"
+      }
+    },
+    {
+      "name": "error is not a fix",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "error"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      }
+    },
+    {
+      "name": "pass does not override incomplete",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        },
+        {
+          "ruleId": "image-alt",
+          "outcome": "incomplete",
+          "subjectIds": [
+            "occ-v2-original"
+          ]
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "needs-review"
+      }
+    },
+    {
+      "name": "pass does not override error",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        },
+        {
+          "ruleId": "image-alt",
+          "outcome": "error"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      }
+    },
+    {
+      "name": "missing rule is not a fix",
+      "rules": [
+        {
+          "ruleId": "other",
+          "outcome": "pass"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      }
+    },
+    {
+      "name": "missing scanner is not a fix",
+      "rules": [],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      },
+      "omitScanner": true
+    },
+    {
+      "name": "failed page is not a fix",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      },
+      "pageStatus": "failed",
+      "scannerStatus": "partial"
+    },
+    {
+      "name": "failed scanner is not a fix",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      },
+      "pageStatus": "failed",
+      "scannerStatus": "failed"
+    },
+    {
+      "name": "skipped scanner is not a fix",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "pass"
+        }
+      ],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      },
+      "pageStatus": "skipped",
+      "scannerStatus": "skipped"
+    },
+    {
+      "name": "stable occurrence survives issue rename",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "fail",
+          "subjectIds": [
+            "occ-v2-original"
+          ]
+        }
+      ],
+      "currentSubjects": [
+        "occ-v2-original"
+      ],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 1,
+        "new": 0,
+        "limited": false,
+        "verification": "still-present"
+      }
+    },
+    {
+      "name": "additional occurrence is new",
+      "rules": [
+        {
+          "ruleId": "image-alt",
+          "outcome": "fail",
+          "subjectIds": [
+            "occ-v2-original",
+            "occ-v2-other"
+          ]
+        }
+      ],
+      "currentSubjects": [
+        "occ-v2-original",
+        "occ-v2-other"
+      ],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 1,
+        "new": 1,
+        "limited": false,
+        "verification": "still-present"
+      }
+    },
+    {
+      "name": "omitted rule coverage is not a fix",
+      "rules": [],
+      "currentSubjects": [],
+      "expected": {
+        "fixed": 0,
+        "unchanged": 0,
+        "new": 0,
+        "limited": true,
+        "verification": "unverified"
+      }
+    }
+  ]
+}

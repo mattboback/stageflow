@@ -1,0 +1,446 @@
+/* Confirmed fixes lead the report; human checks remain a secondary action.
+   .fix-first also frames the "Expected on staging" note in ReportView. */
+.fix-first {
+	margin-block: var(--sp-5);
+	padding: var(--sp-5);
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	background: var(--surface);
+}
+.fix-first h2 {
+	margin: 0;
+	font-size: var(--fs-7);
+}
+.fix-first > p {
+	margin: var(--sp-1) 0 0;
+	max-width: 72ch;
+	font-size: var(--fs-4);
+	color: var(--ink-muted);
+}
+.fix-first > p.fix-first__projection {
+	color: var(--ink);
+}
+.fix-first__projection strong {
+	color: var(--ink-strong);
+}
+/* the "Expected on staging" note's one action */
+.fix-first > .btn {
+	margin-top: var(--sp-3);
+}
+.fix-first__list {
+	display: grid;
+	gap: var(--sp-2);
+	margin: var(--sp-4) 0 0;
+	padding: 0;
+	list-style: none;
+}
+/* rank · [thumbnail] · finding · gain · chevron. The gain and chevron are
+   pinned to the last tracks, so rows without a gain still line up. */
+.fix-first__item {
+	display: grid;
+	grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: var(--sp-3);
+	width: 100%;
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.12s,
+		background-color 0.12s;
+}
+.fix-first__list--thumbs .fix-first__item {
+	grid-template-columns: 1.5rem 6rem minmax(0, 1fr) auto auto;
+}
+.fix-first__item:hover {
+	border-color: var(--line-strong);
+	background: var(--surface-sunk);
+}
+.fix-first__rank {
+	font-size: var(--fs-6);
+	font-weight: 700;
+	color: var(--ink-faint);
+	text-align: center;
+}
+.fix-first__thumb {
+	display: block;
+	aspect-ratio: 5 / 3;
+}
+.fix-first__crop {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 1px solid var(--line);
+	border-radius: var(--r-xs);
+	background: var(--surface-sunk);
+}
+/* Headers and page-level checks have no element to show. */
+.fix-first__crop--none {
+	display: grid;
+	place-items: center;
+	border-style: dashed;
+	background: none;
+	font-size: var(--fs-1);
+	color: var(--ink-muted);
+}
+.fix-first__body {
+	display: grid;
+	gap: var(--sp-1);
+	min-width: 0;
+}
+.fix-first__title {
+	font-weight: 600;
+	color: var(--ink-strong);
+}
+.fix-first__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-1) var(--sp-2);
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.fix-first__guidance {
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.fix-first__gain {
+	grid-column: -3;
+	font-size: var(--fs-5);
+	font-weight: 700;
+	color: var(--sev-pass-ink);
+	white-space: nowrap;
+}
+.fix-first__open {
+	grid-column: -2;
+	color: var(--ink-faint);
+}
+.fix-first__item:hover .fix-first__open {
+	color: var(--ink-strong);
+}
+@media (max-width: 640px) {
+	.fix-first {
+		padding: var(--sp-4);
+	}
+	.fix-first__item,
+	.fix-first__list--thumbs .fix-first__item {
+		grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+		padding: var(--sp-3);
+	}
+	.fix-first__thumb,
+	.fix-first__open {
+		display: none;
+	}
+	.fix-first__gain {
+		grid-column: -2;
+	}
+}
+.rnext.rnext--secondary {
+	padding: var(--sp-3) 0;
+	background: transparent;
+	border: 0;
+}
+.issue-new {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
+	vertical-align: middle;
+	padding: 0.1rem 0.35rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	color: var(--sev-serious-ink);
+	background: var(--sev-serious-wash);
+}
+.issue-new--fixed {
+	color: var(--sev-pass-ink);
+	background: var(--sev-pass-wash);
+}
+.evidence__table-wrap {
+	overflow-x: auto;
+	max-width: 100%;
+}
+.evidence__audit table {
+	border-collapse: collapse;
+	width: 100%;
+	font-size: 0.85rem;
+}
+.evidence__audit th,
+.evidence__audit td {
+	padding: 0.5rem;
+	border: 1px solid var(--line);
+	text-align: left;
+	overflow-wrap: anywhere;
+	min-width: 7rem;
+}
+.evidence__audit caption {
+	text-align: left;
+	padding: 0.5rem 0;
+	color: var(--ink-muted);
+}
+
+/* The severity dot lives in instrument.css: it is the one severity mark that
+   also appears outside report surfaces (home's preview panel). */
+
+/* ------------------------------------------------------------------------- */
+/*  Severity badge (tinted pill with severity-colored text)                   */
+/* ------------------------------------------------------------------------- */
+.sev-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.24rem 0.65rem;
+	border-radius: var(--r-pill);
+	font-size: var(--fs-2);
+	font-weight: 700;
+	text-transform: capitalize;
+	color: var(--ink-muted);
+	background: var(--surface-sunk);
+}
+.sev-badge.sev-critical {
+	color: var(--sev-critical-ink);
+	background: var(--sev-critical-wash);
+}
+.sev-badge.sev-serious {
+	color: var(--sev-serious-ink);
+	background: var(--sev-serious-wash);
+}
+.sev-badge.sev-moderate {
+	color: var(--sev-moderate-ink);
+	background: var(--sev-moderate-wash);
+}
+.sev-badge.sev-minor {
+	color: var(--sev-minor-ink);
+	background: var(--sev-minor-wash);
+}
+.sev-badge.sev-info {
+	color: var(--sev-info-ink);
+	background: var(--sev-info-wash);
+}
+
+/* ------------------------------------------------------------------------- */
+/*  Severity filter chips (toggleable, used in IssueFilterSidebar)            */
+/* ------------------------------------------------------------------------- */
+.sev-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.3rem 0.7rem;
+	border-radius: var(--r-pill);
+	border: 1px solid var(--line-strong);
+	background: var(--surface);
+	color: var(--ink-muted);
+	font-size: var(--fs-3);
+	font-weight: 600;
+	text-transform: capitalize;
+	cursor: pointer;
+	transition:
+		background-color 0.12s,
+		border-color 0.12s,
+		color 0.12s;
+	white-space: nowrap;
+	font-family: inherit;
+}
+.sev-chip.size-md {
+	padding: 0.4rem 0.85rem;
+	font-size: var(--fs-4);
+}
+.sev-chip:hover {
+	background: var(--surface-sunk);
+	border-color: var(--ink-faint);
+}
+/* Active state — severity-coloured fill. The label sits ON the fill, so it
+ * takes --on-severity, which flips to dark ink when the fills go light. The
+ * amber and green fills use their -ink value rather than the base: the base
+ * is too light to carry white text at 4.5:1. */
+.sev-chip.active {
+	color: var(--on-severity);
+	background: var(--ink-strong);
+	border-color: var(--ink-strong);
+}
+.sev-chip.sev-critical.active {
+	background: var(--sev-critical);
+	border-color: var(--sev-critical);
+}
+.sev-chip.sev-serious.active {
+	background: var(--sev-serious);
+	border-color: var(--sev-serious);
+}
+.sev-chip.sev-moderate.active {
+	background: var(--sev-moderate-ink);
+	border-color: var(--sev-moderate-ink);
+}
+.sev-chip.sev-minor.active {
+	background: var(--sev-minor-ink);
+	border-color: var(--sev-minor-ink);
+}
+.sev-chip.sev-info.active {
+	background: var(--sev-info);
+	border-color: var(--sev-info);
+}
+
+/* Inactive tinted state — severity-colored text so the mapping reads before
+ * toggling. */
+.sev-chip.sev-critical:not(.active) {
+	color: var(--sev-critical-ink);
+	border-color: var(--sev-critical-edge);
+}
+.sev-chip.sev-critical:not(.active):hover {
+	background: var(--sev-critical-wash);
+}
+.sev-chip.sev-serious:not(.active) {
+	color: var(--sev-serious-ink);
+	border-color: var(--sev-serious-edge);
+}
+.sev-chip.sev-serious:not(.active):hover {
+	background: var(--sev-serious-wash);
+}
+.sev-chip.sev-moderate:not(.active) {
+	color: var(--sev-moderate-ink);
+	border-color: var(--sev-moderate-edge);
+}
+.sev-chip.sev-moderate:not(.active):hover {
+	background: var(--sev-moderate-wash);
+}
+.sev-chip.sev-minor:not(.active) {
+	color: var(--sev-minor-ink);
+	border-color: var(--sev-minor-edge);
+}
+.sev-chip.sev-minor:not(.active):hover {
+	background: var(--sev-minor-wash);
+}
+.sev-chip.sev-info:not(.active) {
+	color: var(--sev-info-ink);
+	border-color: var(--sev-info-edge);
+}
+.sev-chip.sev-info:not(.active):hover {
+	background: var(--sev-info-wash);
+}
+
+/* ------------------------------------------------------------------------- */
+/*  Severity bar and its legend (SeverityBar.tsx)                             */
+/* ------------------------------------------------------------------------- */
+/* No fill of its own: the 2px gaps show the surface between segments, and
+   the part of the scale a row does not reach is a sunk track. The baseline
+   (left) end is square; the data end is rounded. */
+.sevbar {
+	display: flex;
+	gap: 2px;
+	height: 6px;
+	min-width: 0;
+}
+.sevbar--sm {
+	height: 4px;
+}
+.sevbar--lg {
+	height: 8px;
+}
+.sevbar__seg,
+.sevbar__rest,
+.sevbar__clean {
+	display: block;
+	min-width: 4px;
+}
+.sevbar__seg--end,
+.sevbar__clean {
+	border-radius: 0 var(--r-xs) var(--r-xs) 0;
+}
+.sevbar__seg.sev-critical,
+.sevlegend__swatch.sev-critical {
+	background: var(--sev-critical);
+}
+.sevbar__seg.sev-serious,
+.sevlegend__swatch.sev-serious {
+	background: var(--sev-serious);
+}
+.sevbar__seg.sev-moderate,
+.sevlegend__swatch.sev-moderate {
+	background: var(--sev-moderate);
+}
+.sevbar__seg.sev-minor,
+.sevlegend__swatch.sev-minor {
+	background: var(--sev-minor);
+}
+.sevbar__seg.sev-info,
+.sevlegend__swatch.sev-info {
+	background: var(--sev-info);
+}
+.sevbar__rest {
+	background: var(--surface-sunk);
+}
+.sevbar__clean {
+	flex: 1;
+	background: var(--sev-pass);
+}
+/* Forced colours drop backgrounds, which would erase the bar. One ink keeps
+   the proportions; the legend beside it names the severities. */
+@media (forced-colors: active) {
+	.sevbar__seg,
+	.sevbar__clean,
+	.sevlegend__swatch {
+		forced-color-adjust: none;
+		background: CanvasText;
+	}
+	.sevbar__rest {
+		forced-color-adjust: none;
+		background: GrayText;
+	}
+}
+
+.sevlegend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-1) var(--sp-3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.sevlegend__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	white-space: nowrap;
+}
+.sevlegend__item .num {
+	font-weight: 700;
+	color: var(--ink-strong);
+}
+/* A piece of the bar: same height as the default bar, square ends. */
+.sevlegend__swatch {
+	flex: none;
+	width: 0.75rem;
+	height: 6px;
+}
+.sevlegend--buttons {
+	gap: var(--sp-1);
+	margin-left: calc(-1 * var(--sp-2));
+}
+button.sevlegend__item {
+	min-height: 1.75rem;
+	padding: 0 var(--sp-2);
+	border: 0;
+	border-radius: var(--r-xs);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	transition: background-color 0.12s;
+}
+button.sevlegend__item:hover {
+	background: var(--surface-sunk);
+	color: var(--ink-strong);
+}

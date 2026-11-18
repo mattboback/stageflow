@@ -1,0 +1,20 @@
+# StageFlow
+
+> StageFlow audits a frontend and compares deployments. Five scanners check accessibility, SEO, links, and security headers in isolated containers and merge their findings into one report; saved reports can be diffed to catch new regressions.
+
+## Core pages
+
+- [Home](https://stageflow.org/): Product overview and scanner index.
+- [Local projects](https://stageflow.org/projects): Browser-local projects and baseline comparisons.
+- [Playground](https://stageflow.org/playground): Configure a one-off public URL scan.
+
+## Documentation
+
+- [README](https://github.com/mattboback/stageflow/blob/main/README.md): Setup, architecture, configuration, security, and development.
+- [Source](https://github.com/mattboback/stageflow): MIT-licensed source code and issue tracker.
+
+## API
+
+- `GET /api/v1/jobs/{jobId}/results`: Unified JSON report for a completed scan.
+
+The hosted demo processes submitted targets and scan data on its deployment. Self-host StageFlow for static-site ZIP uploads, private-target scanning, or control over data residency.

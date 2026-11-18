@@ -1,0 +1,312 @@
+/**
+ * Hydrate-then-iterate test (mocked Playwright surface).
+ *
+ * Asserts the design contract: hydrateAuth runs once per scanner before page
+ * iteration, and literal credentials are used only at execution time and never
+ * logged.
+ */
+
+import type { BrowserContext, Page } from 'playwright';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { BrowserManager } from '../../src/core/browser-manager';
+import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
+
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
+
+const fsHelperMocks = vi.hoisted(() => ({
+	pathExists: vi.fn().mockResolvedValue(false),
+	readJson: vi.fn(),
+	writeJson: vi.fn().mockResolvedValue(undefined),
+	ensureDir: vi.fn().mockResolvedValue(undefined)
+}));
+
+const chmodMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../src/utils/fs', () => fsHelperMocks);
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		chmod: chmodMock,
+		copyFile: vi.fn().mockResolvedValue(undefined)
+	};
+});
+
+const fsMock: {
+	ensureDir: ReturnType<typeof vi.fn>;
+	chmod: ReturnType<typeof vi.fn>;
+} = {
+	ensureDir: fsHelperMocks.ensureDir,
+	chmod: chmodMock
+};
+
+const SECRET_USER = 'hydrate-test-user-9j2n3kl12';
+const SECRET_PASSWORD = 'p@ss word+1';
+const LITERAL_SECRET = 'literal value+2';
+
+const baseConfig: ScannerConfig = {
+	jobId: 'job-hydrate',
+	provenancePath: '/tmp/provenance.json',
+	resultsDir: '/tmp/results',
+	scannerName: 'axe',
+	concurrency: 1,
+	maxRetries: 1,
+	browser: {
+		headless: true,
+		args: [],
+		defaultViewport: { width: 1280, height: 720 },
+		deviceScaleFactor: 1,
+		defaultTimeout: 30_000,
+		pageLoadTimeout: 15_000
+	}
+};
+
+interface MockHarness {
+	pages: Page[];
+	context: BrowserContext;
+	browserManager: BrowserManager;
+}
+
+function createHarness(): MockHarness {
+	const pages: Page[] = [];
+
+	const context: BrowserContext = {
+		newPage: vi.fn().mockImplementation(() => {
+			let currentUrl = 'about:blank';
+			const page = {
+				url: () => currentUrl,
+				close: vi.fn().mockResolvedValue(undefined),
+				setViewportSize: vi.fn().mockResolvedValue(undefined),
+				waitForLoadState: vi.fn().mockResolvedValue(undefined),
+				waitForSelector: vi.fn().mockResolvedValue(undefined),
+				waitForTimeout: vi.fn().mockResolvedValue(undefined),
+				_setUrl(next: string) {
+					currentUrl = next;
+				}
+			} as unknown as Page;
+			pages.push(page);
+			return Promise.resolve(page);
+		}),
+		close: vi.fn().mockResolvedValue(undefined)
+	} as unknown as BrowserContext;
+
+	const browserManager: BrowserManager = {
+		createContext: vi.fn().mockResolvedValue(context),
+		assertPageHealthy: vi.fn(),
+		closePage: vi.fn().mockImplementation((page: Page) => page.close()),
+		navigateToPage: vi.fn().mockImplementation((page: Page, url: string) => {
+			(page as Page & { _setUrl: (u: string) => void })._setUrl(
+				url.startsWith('https://app.example.com/login') ? 'https://app.example.com/profile' : url
+			);
+			return Promise.resolve();
+		}),
+		executePreScanActions: vi.fn().mockResolvedValue(undefined)
+	} as unknown as BrowserManager;
+
+	return { pages, context, browserManager };
+}
+
+describe('hydrate-then-iterate', () => {
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('runs form hydration once before iterating pages and uses literal credentials', async () => {
+		const harness = createHarness();
+		const formEncodedPassword = new URLSearchParams([['password', SECRET_PASSWORD]])
+			.toString()
+			.slice('password='.length);
+		const credentialRedirect =
+			`https://app.example.com/profile?username=${encodeURIComponent(SECRET_USER)}` +
+			`&password=${formEncodedPassword}`;
+		const authLoginUrl =
+			`https://app.example.com/login?prefill=${formEncodedPassword}` +
+			`&tenant=${encodeURIComponent(LITERAL_SECRET)}`;
+		vi.mocked(harness.browserManager.executePreScanActions).mockImplementation((page: Page) => {
+			(page as Page & { _setUrl: (url: string) => void })._setUrl(credentialRedirect);
+			return Promise.resolve();
+		});
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [
+				{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' },
+				{ id: 'settings', path: '/settings', url: 'https://app.example.com/settings' }
+			],
+			auth: {
+				mode: 'form',
+				login_url: authLoginUrl,
+				steps: [
+					{
+						type: 'fill',
+						selector: 'input[name=email]',
+						value: SECRET_USER
+					},
+					{
+						type: 'fill',
+						selector: 'input[name=password]',
+						value: SECRET_PASSWORD
+					},
+					{ type: 'fill', selector: 'input[name=tenant]', value: LITERAL_SECRET },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		};
+
+		const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+		const iterator = new PageIterator(harness.browserManager, baseConfig, logger);
+		const scanCallback = vi.fn<PageScanCallback>().mockImplementation((ctx) =>
+			Promise.resolve<PageScanResult>({
+				pageId: ctx.pageEntry.id,
+				url: ctx.pageEntry.url,
+				path: ctx.pageEntry.path,
+				success: true,
+				issues: [],
+				durationMs: 0,
+				startedAt: '1970-01-01T00:00:00.000Z',
+				finishedAt: '1970-01-01T00:00:00.000Z'
+			})
+		);
+
+		const results = await iterator.iteratePages(provenance, scanCallback);
+
+		// hydration ran exactly once before any page navigation
+		expect(harness.browserManager.navigateToPage).toHaveBeenCalledTimes(3);
+		const navUrls = (
+			harness.browserManager.navigateToPage as ReturnType<typeof vi.fn>
+		).mock.calls.map((args) => args[1] as string);
+		expect(navUrls[0]).toBe(authLoginUrl);
+		expect(navUrls.slice(1)).toEqual([
+			'https://app.example.com/profile',
+			'https://app.example.com/settings'
+		]);
+
+		// Hydration replays literal steps with input masking enabled.
+		expect(harness.browserManager.executePreScanActions).toHaveBeenCalledExactlyOnceWith(
+			expect.anything(),
+			provenance.auth?.mode === 'form' ? provenance.auth.steps : [],
+			{ maskInputValues: true }
+		);
+
+		// The logs name the login URL with its literals redacted, and no credentials.
+		const logged = JSON.stringify([
+			logger.debug.mock.calls,
+			logger.info.mock.calls,
+			logger.warn.mock.calls,
+			logger.error.mock.calls
+		]);
+		expect(logged).toContain('https://app.example.com/login?prefill=[REDACTED]&tenant=[REDACTED]');
+		expect(logged).not.toContain(SECRET_USER);
+		expect(logged).not.toContain(SECRET_PASSWORD);
+		expect(logged).not.toContain(encodeURIComponent(SECRET_USER));
+		expect(logged).not.toContain(encodeURIComponent(SECRET_PASSWORD));
+		expect(logged).not.toContain(formEncodedPassword);
+		expect(logged).not.toContain(LITERAL_SECRET);
+		expect(logged).not.toContain(encodeURIComponent(LITERAL_SECRET));
+
+		// page scans succeeded
+		expect(results).toHaveLength(2);
+		expect(results.every((res) => res.success)).toBe(true);
+	});
+
+	it('fails hydration when authenticated-page cleanup fails and redacts its error', async () => {
+		const harness = createHarness();
+		vi.mocked(harness.browserManager.closePage).mockRejectedValueOnce(
+			new Error(`cleanup ${SECRET_PASSWORD}`)
+		);
+		const provenance: Provenance = {
+			version: '1',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [{ type: 'fill', selector: '#password', value: SECRET_PASSWORD }],
+				success: { type: 'load' }
+			}
+		};
+		const scan = vi.fn<PageScanCallback>();
+		const results = await new PageIterator(harness.browserManager, baseConfig).iteratePages(
+			provenance,
+			scan
+		);
+		expect(scan).not.toHaveBeenCalled();
+		expect(results[0]?.success).toBe(false);
+		expect(results[0]?.error).toContain('Auth page cleanup failed');
+		expect(JSON.stringify(results)).not.toContain(SECRET_PASSWORD);
+	});
+	it('preserves the primary hydration failure when page cleanup also fails', async () => {
+		const harness = createHarness();
+		vi.mocked(harness.browserManager.navigateToPage).mockRejectedValueOnce(
+			new Error('primary login failure')
+		);
+		vi.mocked(harness.browserManager.closePage).mockRejectedValueOnce(
+			new Error('secondary cleanup failure')
+		);
+		const provenance: Provenance = {
+			version: '1',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [],
+				success: { type: 'load' }
+			}
+		};
+		const results = await new PageIterator(harness.browserManager, baseConfig).iteratePages(
+			provenance,
+			vi.fn<PageScanCallback>()
+		);
+		expect(results[0]?.error).toContain('primary login failure');
+		expect(results[0]?.error).not.toContain('secondary cleanup failure');
+	});
+
+	it('runs storage_state hydration once before context creation', async () => {
+		const harness = createHarness();
+
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: { mode: 'storage_state' }
+		};
+
+		const iterator = new PageIterator(harness.browserManager, baseConfig);
+		const scanCallback = vi.fn<PageScanCallback>().mockImplementation((ctx) =>
+			Promise.resolve<PageScanResult>({
+				pageId: ctx.pageEntry.id,
+				url: ctx.pageEntry.url,
+				path: ctx.pageEntry.path,
+				success: true,
+				issues: [],
+				durationMs: 0,
+				startedAt: '1970-01-01T00:00:00.000Z',
+				finishedAt: '1970-01-01T00:00:00.000Z'
+			})
+		);
+
+		const results = await iterator.iteratePages(provenance, scanCallback);
+
+		expect(fsMock.chmod).toHaveBeenCalledWith(expect.any(String), 0o600);
+
+		expect(harness.browserManager.createContext).toHaveBeenCalledWith(
+			undefined,
+			expect.objectContaining({
+				storageStatePath: expect.stringContaining('storage-state.json')
+			})
+		);
+
+		// no form steps were replayed (storage_state mode)
+		expect(harness.browserManager.executePreScanActions).not.toHaveBeenCalled();
+		expect(results).toHaveLength(1);
+		expect(results[0]!.success).toBe(true);
+	});
+});

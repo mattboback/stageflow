@@ -1,0 +1,11 @@
+{
+  "pages_scanned": 3,
+  "scanner_type": "lighthouse",
+  "scanner_violations": 7,
+  "state": "SCANNING",
+  "timing": {
+    "total_ms": 1234
+  },
+  "type": "scanner_complete",
+  "violations": 9
+}

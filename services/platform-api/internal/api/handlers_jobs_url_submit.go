@@ -1,0 +1,680 @@
+package api
+
+import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/mattboback/stageflow/libs/go/httputil"
+	"github.com/mattboback/stageflow/libs/go/logging"
+	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
+)
+
+const (
+	maxURLSubmitBodySize = 2 * 1024 * 1024 // 2 MB
+	maxURLCount          = 100
+	maxURLLength         = 2048
+	defaultScreenshot    = true
+	maxAuthStateBytes    = 1 << 20 // 1 MiB cap on storage-state payload
+	authModeForm         = "form"
+	authModeStorageState = "storage_state"
+)
+
+var errAuthStorageUnavailable = errors.New("auth storage backend unavailable")
+
+type jobURLSubmitRequest struct {
+	Profile             string                     `json:"profile,omitempty"`
+	IdentityScope       string                     `json:"identity_scope,omitempty"`
+	Verification        *models.VerificationConfig `json:"verification,omitempty"`
+	URLs                []string                   `json:"urls"`
+	Modules             []string                   `json:"modules"`
+	ScannerConfigs      map[string]map[string]any  `json:"scanner_configs,omitempty"`
+	Screenshot          *bool                      `json:"screenshot"`
+	Browser             string                     `json:"browser"`
+	AllowPrivateTargets bool                       `json:"allow_private_targets"`
+	Auth                *jobURLAuthInput           `json:"auth,omitempty"`
+}
+
+// jobURLAuthInput mirrors the wire shape the CLI ships in
+// SubmitJobRequest.Auth. Discriminated by mode.
+//
+// For storage_state the CLI base64-encodes the captured Playwright JSON
+// inline; the platform-api validates it parses + enforces a 1 MiB cap, uploads
+// it to the private auth.json under the job directory. JobConfig.Auth carries
+// the authentication mode; raw storage-state bytes stay in that private file.
+//
+// For form, every step value is a literal string. {from_env: NAME} references
+// are rejected at intake (validateLiteralAuthValues): the server never reads
+// credentials from its own environment.
+type jobURLAuthInput struct {
+	Mode         string                       `json:"mode"`
+	StorageState *jobURLAuthStorageStateInput `json:"storage_state,omitempty"`
+	Form         *jobURLAuthFormRecipe        `json:"form,omitempty"`
+}
+
+type jobURLAuthStorageStateInput struct {
+	ContentBase64 string `json:"content_b64"`
+}
+
+type jobURLAuthFormRecipe struct {
+	LoginURL string           `json:"login_url"`
+	Steps    []map[string]any `json:"steps"`
+	Success  map[string]any   `json:"success"`
+}
+
+// handleJobURLSubmit accepts public URL jobs with optional literal authentication.
+func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	req, ok := decodeJobURLSubmitRequest(w, r)
+	if !ok {
+		return
+	}
+
+	if detail := validateProductConfig(req.Profile, req.IdentityScope, req.Verification, req.Modules); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+		return
+	}
+
+	if detail := validateJobURLSubmitPolicy(req, isAPIKeyCaller(r.Context())); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
+		return
+	}
+
+	validationMode, ok := s.validateJobURLSubmitRequest(w, r, req)
+	if !ok {
+		return
+	}
+
+	modules, ok := s.normalizeURLSubmitModules(w, req)
+	if !ok {
+		return
+	}
+
+	if detail, supported := checkBrowserEngine(req.Browser); !supported {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
+
+		return
+	}
+
+	screenshot := defaultScreenshot
+
+	if req.Screenshot != nil {
+		screenshot = *req.Screenshot
+	}
+
+	jobID := uuid.New().String()
+	ctx := logging.WithJobID(r.Context(), jobID)
+	runID := uuid.New().String()[:8]
+	ctx = logging.WithRunID(ctx, runID)
+
+	if !s.ensureAdmissionDisk(ctx, w) {
+		return
+	}
+
+	authRaw, _, ok := s.normalizeJobURLSubmitAuth(ctx, w, jobID, req.Auth, validationMode)
+	if !ok {
+		s.cleanupRejectedJob(jobID)
+		return
+	}
+
+	now := time.Now().UTC()
+	job := &models.Job{
+		State:            models.JobStatePending,
+		TotalPages:       len(req.URLs),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		ExpectedScanners: append([]string(nil), modules...),
+		ID:               jobID,
+		InputType:        "urls",
+		URLs:             req.URLs,
+		Config: models.JobConfig{
+			Profile:             req.Profile,
+			IdentityScope:       req.IdentityScope,
+			Verification:        req.Verification,
+			Modules:             modules,
+			ScannerConfigs:      req.ScannerConfigs,
+			Screenshot:          screenshot,
+			AllowPrivateTargets: req.AllowPrivateTargets,
+			Auth:                authRaw,
+		},
+	}
+
+	if !s.admitURLJob(ctx, w, job) {
+		return
+	}
+
+	logging.Info(ctx, "Job created", "url_count", len(req.URLs), "input_type", "urls")
+
+	httputil.RespondCreated(w, map[string]any{
+		"job_id":  jobID,
+		"status":  "pending",
+		"message": "Job created successfully",
+	})
+}
+
+func validateJobURLSubmitPolicy(req jobURLSubmitRequest, apiKeyCaller bool) *httputil.ErrorDetail {
+	if detail := validateLiteralAuthValues(req.Auth); detail != nil {
+		return detail
+	}
+
+	if req.AllowPrivateTargets && !apiKeyCaller {
+		detail := httputil.NewValidationError(
+			"allow_private_targets",
+			"Private target scans require the API token",
+			"Use a public http/https target.",
+		)
+
+		return &detail
+	}
+
+	return nil
+}
+
+// validateLiteralAuthValues rejects every non-string form step value, whatever
+// the step type, including {from_env: NAME}. The server never reads credentials
+// from its own environment: a recipe that could name a server env var would let
+// any caller have the scanner type that secret into a page the caller controls.
+func validateLiteralAuthValues(auth *jobURLAuthInput) *httputil.ErrorDetail {
+	if auth == nil || auth.Form == nil {
+		return nil
+	}
+
+	for i, step := range auth.Form.Steps {
+		value, hasValue := step["value"]
+		if !hasValue {
+			continue
+		}
+
+		if _, literal := value.(string); literal {
+			continue
+		}
+
+		detail := httputil.NewValidationError(
+			fmt.Sprintf("auth.form.steps[%d].value", i),
+			"Form step values must be literal strings; {from_env} references are not accepted",
+			"Send the value itself. StageFlow does not read credentials from its server environment.",
+		)
+
+		return &detail
+	}
+
+	return nil
+}
+
+func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSubmitRequest, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxURLSubmitBodySize)
+
+	var req jobURLSubmitRequest
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			httputil.RespondError(w, http.StatusRequestEntityTooLarge,
+				fmt.Sprintf("Request body too large (max %d bytes)", maxURLSubmitBodySize))
+
+			return jobURLSubmitRequest{}, false
+		}
+
+		if field, ok := unknownJSONField(err); ok {
+			httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
+				field,
+				fmt.Sprintf("unknown field %q", field),
+				"Supported fields: urls, modules, scanner_configs, screenshot, browser, allow_private_targets, auth, profile, identity_scope, verification",
+			))
+
+			return jobURLSubmitRequest{}, false
+		}
+
+		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
+
+		return jobURLSubmitRequest{}, false
+	}
+
+	return req, true
+}
+
+// unknownJSONField extracts the offending field name from the unexported
+// error encoding/json returns when DisallowUnknownFields trips.
+func unknownJSONField(err error) (string, bool) {
+	const marker = `json: unknown field "`
+
+	msg := err.Error()
+	if !strings.HasPrefix(msg, marker) {
+		return "", false
+	}
+
+	return strings.TrimSuffix(strings.TrimPrefix(msg, marker), `"`), true
+}
+
+func (s *Server) validateJobURLSubmitRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	req jobURLSubmitRequest,
+) (targetValidationMode, bool) {
+	if detail := validateURLSubmitRequest(req.URLs, s.config.MaxPages); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
+		return targetValidationModePublic, false
+	}
+
+	validationMode, detail := s.resolveTargetValidationMode(req.AllowPrivateTargets)
+	if detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
+		return targetValidationModePublic, false
+	}
+
+	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, req.URLs, validationMode); err != nil {
+		detail := httputil.NewValidationError(
+			"urls",
+			"One or more target URLs are invalid or not allowed",
+			"Use public http/https URLs without embedded credentials.",
+		)
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
+
+		return targetValidationModePublic, false
+	}
+
+	return validationMode, true
+}
+
+func (s *Server) normalizeURLSubmitModules(w http.ResponseWriter, req jobURLSubmitRequest) ([]string, bool) {
+	modules, err := scannercatalog.Select(req.Modules)
+	if err != nil {
+		if detail, ok := unsupportedModuleDetail(err); ok {
+			httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
+		} else {
+			httputil.RespondError(w, http.StatusBadRequest, err.Error())
+		}
+
+		return nil, false
+	}
+
+	return modules, true
+}
+
+func (s *Server) normalizeJobURLSubmitAuth(
+	ctx context.Context,
+	w http.ResponseWriter,
+	jobID string,
+	in *jobURLAuthInput,
+	validationMode targetValidationMode,
+) (json.RawMessage, string, bool) {
+	authRaw, authStorageKey, authErr := s.normalizeAndStoreJobURLAuth(ctx, jobID, in, validationMode)
+	if authErr != nil {
+		if errors.Is(authErr, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+			return nil, "", false
+		}
+
+		if errors.Is(authErr, context.Canceled) {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+			return nil, "", false
+		}
+
+		if errors.Is(authErr, errAuthStorageUnavailable) {
+			logging.Error(ctx, "Failed to store auth state", "error", authErr)
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to store auth state")
+
+			return nil, "", false
+		}
+
+		// Auth validation errors can contain browser URLs or values supplied in a
+		// recipe. Keep the response structured and actionable without reflecting
+		// execution-only data back to clients or access logs.
+		detail := httputil.NewValidationError(
+			"auth",
+			"Authentication configuration is invalid",
+			"Review the form login URL, steps, and success condition, then retry.",
+		)
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
+
+		return nil, "", false
+	}
+
+	return authRaw, authStorageKey, true
+}
+
+func (s *Server) admitURLJob(ctx context.Context, w http.ResponseWriter, job *models.Job) bool {
+	if err := s.admitJob(ctx, job); err != nil {
+		if !admissionMayBeCommitted(err) {
+			s.cleanupRejectedJob(job.ID)
+		}
+
+		s.respondAdmissionError(w, err)
+
+		return false
+	}
+
+	return true
+}
+
+func validateURLSubmitRequest(urls []string, maxPages int) *httputil.ErrorDetail {
+	if len(urls) == 0 {
+		detail := httputil.NewValidationError(
+			"urls",
+			"URLs list cannot be empty",
+			"Please provide at least one URL to scan. Example: ['https://example.com']",
+		)
+
+		return &detail
+	}
+
+	if len(urls) > maxPages {
+		detail := httputil.NewValidationError(
+			"urls",
+			fmt.Sprintf("Too many URLs (max %d)", maxPages),
+			fmt.Sprintf("Please provide at most %d URLs per job.", maxPages),
+		)
+
+		return &detail
+	}
+
+	for _, raw := range urls {
+		trimmed := strings.TrimSpace(raw)
+		if len(trimmed) > maxURLLength {
+			detail := httputil.NewValidationError(
+				"urls",
+				fmt.Sprintf("URL exceeds maximum length of %d characters", maxURLLength),
+				"Shorten the URL or split the job into smaller batches.",
+			)
+
+			return &detail
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) resolveTargetValidationMode(
+	allowPrivateTargets bool,
+) (targetValidationMode, *httputil.ErrorDetail) {
+	if !allowPrivateTargets {
+		return targetValidationModePublic, nil
+	}
+
+	if !s.config.AllowPrivateTargets {
+		detail := httputil.NewValidationError(
+			"allow_private_targets",
+			"This API instance does not permit private target scans",
+			"Retry without allow_private_targets or enable private target scans on this API instance.",
+		)
+
+		return targetValidationModePublic, &detail
+	}
+
+	return targetValidationModePrivate, nil
+}
+
+func (s *Server) normalizeAndStoreJobURLAuth(
+	ctx context.Context,
+	jobID string,
+	in *jobURLAuthInput,
+	validationMode targetValidationMode,
+) (json.RawMessage, string, error) {
+	raw, decodedStorageState, err := normalizeJobURLAuth(ctx, s.ipResolver, validationMode, in)
+	if err != nil || decodedStorageState == nil {
+		return raw, "", err
+	}
+
+	if s == nil || s.config == nil || s.config.Files == nil {
+		return nil, "", errAuthStorageUnavailable
+	}
+
+	key := jobID + "/auth.json"
+	if writeErr := s.config.Files.Write(ctx, key, bytes.NewReader(decodedStorageState)); writeErr != nil {
+		return nil, "", fmt.Errorf("%w: %w", errAuthStorageUnavailable, writeErr)
+	}
+
+	out := map[string]any{
+		"mode": authModeStorageState,
+	}
+
+	normalized, marshalErr := json.Marshal(out)
+	if marshalErr != nil {
+		s.cleanupUploadedAuthState(key)
+
+		return nil, "", fmt.Errorf("auth.storage_state: failed to re-marshal: %w", marshalErr)
+	}
+
+	return normalized, key, nil
+}
+
+func (s *Server) cleanupUploadedAuthState(key string) {
+	if key == "" || s == nil || s.config == nil || s.config.Files == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.config.Files.Remove(ctx, key); err != nil {
+		logging.Warn(ctx, "Failed to clean up uploaded auth state", "key", key, "error", err)
+	}
+}
+
+// normalizeJobURLAuth validates the optional auth block carried in the URL
+// submit request and returns its canonical JSON form (Provenance.auth shape)
+// for storage in JobConfig.Auth.
+//
+// The platform-api enforces structure: form recipes round-trip with their
+// literal values, and storage_state returns decoded bytes to the handler so it
+// can write them to a private job file before admitting the job.
+func normalizeJobURLAuth(
+	ctx context.Context,
+	resolver ipAddrResolver,
+	validationMode targetValidationMode,
+	in *jobURLAuthInput,
+) (json.RawMessage, []byte, error) {
+	if in == nil {
+		return nil, nil, nil
+	}
+
+	switch in.Mode {
+	case authModeStorageState:
+		return normalizeJobURLStorageStateAuth(in)
+
+	case authModeForm:
+		return normalizeJobURLFormAuth(ctx, resolver, validationMode, in)
+
+	case "":
+		return nil, nil, errors.New("auth.mode is required")
+
+	default:
+		return nil, nil, fmt.Errorf("auth.mode %q is not supported (expected %q or %q)",
+			in.Mode, authModeForm, authModeStorageState)
+	}
+}
+
+func normalizeJobURLStorageStateAuth(in *jobURLAuthInput) (json.RawMessage, []byte, error) {
+	if in.Form != nil {
+		return nil, nil, errors.New(`auth.form is only valid with mode="form"`)
+	}
+
+	if in.StorageState == nil || strings.TrimSpace(in.StorageState.ContentBase64) == "" {
+		return nil, nil, errors.New(`auth.storage_state.content_b64 is required when mode="storage_state"`)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(in.StorageState.ContentBase64)
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth.storage_state.content_b64 is not valid base64: %w", err)
+	}
+
+	if validateErr := validateDecodedStorageState(decoded); validateErr != nil {
+		return nil, nil, validateErr
+	}
+
+	return nil, decoded, nil
+}
+
+func validateDecodedStorageState(decoded []byte) error {
+	if len(decoded) == 0 {
+		return errors.New("auth.storage_state.content_b64 decodes to empty bytes")
+	}
+
+	if len(decoded) > maxAuthStateBytes {
+		return fmt.Errorf(
+			"auth.storage_state.content_b64 decodes to %d bytes, exceeding the %d byte limit",
+			len(decoded),
+			maxAuthStateBytes,
+		)
+	}
+
+	var probe map[string]any
+	if unmarshalErr := json.Unmarshal(decoded, &probe); unmarshalErr != nil {
+		return fmt.Errorf("auth.storage_state.content_b64 is not valid JSON: %w", unmarshalErr)
+	}
+
+	return nil
+}
+
+func normalizeJobURLFormAuth(
+	ctx context.Context,
+	resolver ipAddrResolver,
+	validationMode targetValidationMode,
+	in *jobURLAuthInput,
+) (json.RawMessage, []byte, error) {
+	if err := validateJobURLFormAuth(ctx, resolver, validationMode, in); err != nil {
+		return nil, nil, err
+	}
+
+	out := map[string]any{
+		"mode":      authModeForm,
+		"login_url": in.Form.LoginURL,
+		"steps":     in.Form.Steps,
+		"success":   in.Form.Success,
+	}
+
+	raw, err := json.Marshal(out)
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth.form: failed to re-marshal: %w", err)
+	}
+
+	return raw, nil, nil
+}
+
+func validateJobURLFormAuth(
+	ctx context.Context,
+	resolver ipAddrResolver,
+	validationMode targetValidationMode,
+	in *jobURLAuthInput,
+) error {
+	if in.StorageState != nil {
+		return errors.New(`auth.storage_state is only valid with mode="storage_state"`)
+	}
+
+	if in.Form == nil {
+		return errors.New(`auth.form is required when mode="form"`)
+	}
+
+	if strings.TrimSpace(in.Form.LoginURL) == "" {
+		return errors.New("auth.form.login_url is required")
+	}
+
+	if err := validateTargetURLsWithResolver(ctx, resolver, []string{in.Form.LoginURL}, validationMode); err != nil {
+		return fmt.Errorf("auth.form.login_url: %w", err)
+	}
+
+	if err := validateJobURLFormRecipe(in.Form); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateJobURLFormRecipe(form *jobURLAuthFormRecipe) error {
+	if len(form.Steps) == 0 {
+		return errors.New("auth.form.steps must contain at least one step")
+	}
+
+	if form.Success == nil {
+		return errors.New("auth.form.success is required")
+	}
+
+	if _, hasType := form.Success["type"].(string); !hasType {
+		return errors.New("auth.form.success.type is required")
+	}
+
+	for i, step := range form.Steps {
+		if validateErr := validateAuthStep(step); validateErr != nil {
+			return fmt.Errorf("auth.form.steps[%d]: %w", i, validateErr)
+		}
+	}
+
+	return nil
+}
+
+// validateAuthStep mirrors the schema-level validation for PreScanAction
+// without bringing in the full ajv pipeline. We only need to catch shapes the
+// orchestrator can't safely process; the scanner-runner re-validates at
+// hydration time.
+func validateAuthStep(step map[string]any) error {
+	t, ok := step["type"].(string)
+	if !ok {
+		return errors.New("step.type is required")
+	}
+
+	if t == "" {
+		return errors.New("step.type is required")
+	}
+
+	switch t {
+	case "click", "fill", "select", "hover":
+		if _, hasSel := step["selector"].(string); !hasSel {
+			return fmt.Errorf("step type %q requires a selector", t)
+		}
+	case "wait":
+		if _, hasMS := step["ms"]; !hasMS {
+			return errors.New(`step type "wait" requires "ms"`)
+		}
+	case "scroll":
+		// selector optional
+	case "keyboard":
+		if _, hasKey := step["key"].(string); !hasKey {
+			return errors.New(`step type "keyboard" requires "key"`)
+		}
+	default:
+		return fmt.Errorf("unknown step.type %q", t)
+	}
+
+	if t == "fill" || t == "select" {
+		raw, hasValue := step["value"]
+		if !hasValue {
+			return fmt.Errorf("step type %q requires a value", t)
+		}
+
+		if err := validateAuthStepValue(raw); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAuthStepValue(raw any) error {
+	if _, literal := raw.(string); literal {
+		return nil
+	}
+
+	return fmt.Errorf("step.value must be a string (got %T)", raw)
+}

@@ -1,0 +1,52 @@
+{
+	"id": "lighthouse",
+	"name": "Google Lighthouse",
+	"version": "1.0.0",
+	"description": "Accessibility, SEO, and best-practices auditing using Google Lighthouse.",
+	"aliases": ["best-practices"],
+	"author": "Stageflow",
+	"license": "MIT",
+	"homepage": "https://developers.google.com/web/tools/lighthouse",
+	"capabilities": {
+		"categories": ["accessibility", "seo", "quality"],
+		"outputFormats": ["json", "html"],
+		"supportsScreenshots": false,
+		"supportsConcurrency": false,
+		"requiresBrowser": true,
+		"supportsOffline": false,
+		"maxConcurrency": 1,
+		"estimatedTimePerPage": 15000
+	},
+	"requirements": {
+		"browser": {
+			"type": "chromium",
+			"headless": true
+		},
+		"resources": {
+			"maxMemoryMB": 2560,
+			"cpus": 2.5
+		}
+	},
+	"entry": {
+		"module": "./index.js",
+		"exportName": "LighthouseScanner"
+	},
+	"configSchema": {
+		"type": "object",
+		"properties": {
+			"categories": {
+				"type": "array",
+				"items": {
+					"type": "string",
+					"enum": ["accessibility", "best-practices", "seo"]
+				},
+				"default": ["accessibility", "best-practices", "seo"],
+				"description": "Lighthouse categories to audit"
+			}
+		}
+	},
+	"output": {
+		"categoryPrefix": "lighthouse",
+		"includeRawResults": true
+	}
+}

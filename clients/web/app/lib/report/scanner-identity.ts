@@ -1,0 +1,47 @@
+import { Accessibility, Link2, Search, Shield, Zap } from 'lucide-react';
+
+export interface ScannerMeta {
+	icon: typeof Shield;
+	label: string;
+	description: string;
+}
+
+export const SCANNER_META: Record<string, ScannerMeta> = {
+	axe: {
+		icon: Accessibility,
+		label: 'Axe Accessibility',
+		description: 'WCAG accessibility testing with axe-core engine'
+	},
+	lighthouse: {
+		icon: Zap,
+		label: 'Lighthouse',
+		description: 'Accessibility, SEO, and best-practices audits'
+	},
+	'link-checker': {
+		icon: Link2,
+		label: 'Link Checker',
+		description: 'Detect broken links and redirect chains'
+	},
+	'security-headers': {
+		icon: Shield,
+		label: 'Security Headers',
+		description: 'HTTP security header analysis and scoring'
+	},
+	seo: {
+		icon: Search,
+		label: 'SEO',
+		description: 'Meta tags, headings, and SEO optimization'
+	}
+};
+
+/**
+ * Canonical user-facing scanner name. Prefers the SCANNER_META label so the
+ * homepage, configure page, and report all say the same thing; falls back to
+ * the API-provided name with any trailing " Scanner" suffix dropped.
+ */
+export function scannerLabel(id: string, apiName?: string | null): string {
+	const meta = SCANNER_META[id];
+	if (meta) return meta.label;
+	if (apiName) return apiName.replace(/\s+Scanner$/i, '');
+	return id;
+}

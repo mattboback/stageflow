@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+*.zip binary
+
+libs/contracts/**/generated/** linguist-generated=true
+libs/contracts/scanner-manifest/scanner_manifest.go linguist-generated=true
+clients/web/public/schemas/** linguist-generated=true
+clients/web/public/demo/** linguist-generated=true
+clients/web/app/lib/demo/demo-crop.ts linguist-generated=true
+clients/web/public/fonts/** linguist-vendored=true

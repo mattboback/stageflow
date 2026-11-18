@@ -1,0 +1,41 @@
+/* Ink tones only: the line recedes, and the two runs that matter, the baseline
+   and the latest, carry the marks. Earlier runs show a marker on hover. */
+.score-history {
+	display: block;
+	flex: 0 0 auto;
+}
+.score-history__baseline {
+	stroke: var(--line);
+	stroke-width: 1;
+}
+.score-history__line {
+	fill: none;
+	stroke: var(--ink-faint);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.score-history__hit {
+	fill: transparent;
+}
+/* The stroke is painted under the fill: an 8px marker with a 2px ring outside it. */
+.score-history__dot {
+	fill: var(--ink-muted);
+	stroke: var(--surface);
+	stroke-width: 4;
+	paint-order: stroke;
+	opacity: 0;
+}
+.score-history__run:hover .score-history__dot,
+.score-history__run--latest .score-history__dot,
+.score-history__run--baseline .score-history__dot {
+	opacity: 1;
+}
+.score-history__run--latest .score-history__dot {
+	fill: var(--ink-strong);
+}
+/* Hollow, so the baseline differs from the latest by shape as well as tone. */
+.score-history__run--baseline .score-history__dot {
+	fill: var(--surface);
+	stroke: var(--ink-strong);
+}

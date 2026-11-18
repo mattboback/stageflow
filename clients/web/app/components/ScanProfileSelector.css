@@ -1,0 +1,26 @@
+/* label and select on one line; the consequence of the choice reads as a hint */
+.scan-profile {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-1) var(--sp-2);
+	min-width: 0;
+}
+.scan-profile label {
+	font-size: var(--fs-3);
+	font-weight: 600;
+	color: var(--ink-muted);
+}
+.scan-profile select {
+	width: auto;
+	padding: 0.4rem 2rem 0.4rem 0.7rem;
+	font-size: var(--fs-3);
+}
+.scan-profile p {
+	flex-basis: 100%;
+	margin: 0;
+	font-size: var(--fs-2);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
+}

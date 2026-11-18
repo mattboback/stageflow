@@ -1,0 +1,196 @@
+package logging
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"log/slog"
+	"testing"
+)
+
+func TestNew(t *testing.T) {
+	logger := New(&Config{
+		Level:       slog.LevelInfo,
+		ServiceName: "test-service",
+	})
+
+	if logger == nil {
+		t.Fatal("expected logger to be non-nil")
+	}
+}
+
+// Code that logs through the package-level slog functions has to pick up the
+// service-tagged logger, so Setup's side effect is the point.
+func TestSetupInstallsServiceLogger(t *testing.T) {
+	previous := slog.Default()
+
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	logger := Setup("test-service")
+	if logger == nil || slog.Default() != logger {
+		t.Fatal("Setup did not install its logger as slog.Default")
+	}
+}
+
+func TestNewWithNilConfig(t *testing.T) {
+	logger := New(nil)
+	if logger == nil {
+		t.Fatal("expected logger to be non-nil with nil config")
+	}
+}
+
+func TestContextHelpers(t *testing.T) {
+	ctx := context.Background()
+
+	// Test WithJobID
+	ctx = WithJobID(ctx, "job-123")
+	if got := JobID(ctx); got != "job-123" {
+		t.Errorf("JobID() = %q, want %q", got, "job-123")
+	}
+
+	// Test WithRequestID
+	ctx = WithRequestID(ctx, "req-456")
+	if got := RequestID(ctx); got != "req-456" {
+		t.Errorf("RequestID() = %q, want %q", got, "req-456")
+	}
+
+	// Test WithRunID
+	ctx = WithRunID(ctx, "run-789")
+	if got := RunID(ctx); got != "run-789" {
+		t.Errorf("RunID() = %q, want %q", got, "run-789")
+	}
+}
+
+func TestContextHelpersEmptyContext(t *testing.T) {
+	ctx := context.Background()
+
+	if got := JobID(ctx); got != "" {
+		t.Errorf("JobID() = %q, want empty string", got)
+	}
+
+	if got := RequestID(ctx); got != "" {
+		t.Errorf("RequestID() = %q, want empty string", got)
+	}
+
+	if got := RunID(ctx); got != "" {
+		t.Errorf("RunID() = %q, want empty string", got)
+	}
+}
+
+func TestFromContext(t *testing.T) {
+	ctx := context.Background()
+	ctx = WithJobID(ctx, "job-123")
+	ctx = WithRequestID(ctx, "req-456")
+	ctx = WithRunID(ctx, "run-789")
+
+	attrs := FromContext(ctx)
+	if len(attrs) != 3 {
+		t.Errorf("FromContext() returned %d attrs, want 3", len(attrs))
+	}
+
+	// Check that expected attributes are present
+	attrMap := make(map[string]string)
+	for _, attr := range attrs {
+		attrMap[attr.Key] = attr.Value.String()
+	}
+
+	if attrMap["job_id"] != "job-123" {
+		t.Errorf("job_id = %q, want %q", attrMap["job_id"], "job-123")
+	}
+
+	if attrMap["request_id"] != "req-456" {
+		t.Errorf("request_id = %q, want %q", attrMap["request_id"], "req-456")
+	}
+
+	if attrMap["run_id"] != "run-789" {
+		t.Errorf("run_id = %q, want %q", attrMap["run_id"], "run-789")
+	}
+}
+
+func TestFromContextEmpty(t *testing.T) {
+	ctx := context.Background()
+
+	attrs := FromContext(ctx)
+	if len(attrs) != 0 {
+		t.Errorf("FromContext() returned %d attrs for empty context, want 0", len(attrs))
+	}
+}
+
+func TestLWithContext(t *testing.T) {
+	// Set up a buffer to capture log output
+	var buf bytes.Buffer
+
+	handler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	ctx := context.Background()
+	ctx = WithJobID(ctx, "job-test")
+
+	L(ctx).Info("test message")
+
+	// Parse the JSON output
+	var logEntry map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &logEntry); err != nil {
+		t.Fatalf("failed to parse log output: %v", err)
+	}
+
+	if logEntry["msg"] != "test message" {
+		t.Errorf("msg = %q, want %q", logEntry["msg"], "test message")
+	}
+
+	if logEntry["job_id"] != "job-test" {
+		t.Errorf("job_id = %v, want %q", logEntry["job_id"], "job-test")
+	}
+}
+
+func TestConvenienceFunctions(t *testing.T) {
+	var buf bytes.Buffer
+
+	handler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	ctx := WithJobID(context.Background(), "job-conv")
+
+	// Test Info
+	buf.Reset()
+	Info(ctx, "info message", "key", "value")
+
+	var entry map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("Info: failed to parse log: %v", err)
+	}
+
+	if entry["level"] != "INFO" {
+		t.Errorf("Info level = %v, want INFO", entry["level"])
+	}
+
+	if entry["job_id"] != "job-conv" {
+		t.Errorf("Info job_id = %v, want job-conv", entry["job_id"])
+	}
+
+	// Test Warn
+	buf.Reset()
+	Warn(ctx, "warn message")
+
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("Warn: failed to parse log: %v", err)
+	}
+
+	if entry["level"] != "WARN" {
+		t.Errorf("Warn level = %v, want WARN", entry["level"])
+	}
+
+	// Test Error
+	buf.Reset()
+	Error(ctx, "error message")
+
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		t.Fatalf("Error: failed to parse log: %v", err)
+	}
+
+	if entry["level"] != "ERROR" {
+		t.Errorf("Error level = %v, want ERROR", entry["level"])
+	}
+}

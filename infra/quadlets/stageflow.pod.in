@@ -1,0 +1,21 @@
+[Unit]
+Description=StageFlow Pod
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target
+
+[Pod]
+PodName=stageflow
+Network=@NETWORK_NAME@
+
+# Service aliases on the stack network. Job pods run on
+# their own isolated network (stageflow-jobs.network) and cannot resolve them.
+NetworkAlias=postgres
+NetworkAlias=orchestrator
+NetworkAlias=platform-api
+NetworkAlias=frontend
+NetworkAlias=stageflow-web-react
+NetworkAlias=stageflow-api
+
+[Install]
+WantedBy=stageflow.target

@@ -1,0 +1,488 @@
+import type { IssueDetail } from '../../lib/types/unified-report';
+import { verificationUnavailableReason } from '../../lib/verification';
+import { useCallback, useMemo, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router';
+
+import { Pill } from '../Pill';
+import { AllClearBanner } from './AllClearBanner';
+import { FixTheseFirst } from './FixTheseFirst';
+import type { ProjectDiff } from '../../lib/projects';
+import { ErrorsView } from './ErrorsView';
+import { IssueDetailModal } from './IssueDetailModal';
+import { IssuesView } from './IssuesView';
+import { LighthouseSummary } from './LighthouseSummary';
+import { ManualChecksPanel } from './ManualChecksPanel';
+import { ReportHeader } from './ReportHeader';
+import { ReportSectionNav, type ReportSection } from './ReportSectionNav';
+import { PagesView } from './PagesView';
+import { VisualReviewPanel } from './VisualReviewPanel';
+import { useHydrated } from '../../lib/hooks/useHydrated';
+import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
+import {
+	buildOccurrenceModeReport,
+	explainScore,
+	incompleteScanners,
+	isIssueSortKey,
+	needsHumanReview,
+	sortIssues,
+	splitManualChecks,
+	type IssueSortKey
+} from '../../lib/report';
+import type { ScanStatus, ScreenshotArtifact } from '../../lib/types/scan';
+import type { UnifiedReport } from '../../lib/types/unified-report';
+
+const SECTIONS: readonly ReportSection[] = ['review', 'pages', 'issues', 'artifacts'];
+const NO_QUERY = new URLSearchParams();
+
+function isSection(value: string | null): value is ReportSection {
+	return value !== null && (SECTIONS as readonly string[]).includes(value);
+}
+
+/* ?section=overview predates the current nav and folds into review. ?section=pages
+   is a real section again, but only when there is more than one page to compare --
+   a one-page report resolves it back to review rather than showing an empty tab
+   somebody deep-linked to. */
+function resolveSection(raw: string | null, pageCount: number): ReportSection {
+	if (raw === 'pages') return pageCount > 1 ? 'pages' : 'review';
+	if (isSection(raw)) return raw;
+	return 'review';
+}
+
+export interface ReportViewProps {
+	/** Fixture sources can be shown without implying a live destination. */
+	sourceUrlMode?: 'link' | 'label';
+	/** Keys the review-verdict store, so two reports never share decisions. */
+	jobId: string;
+	/**
+	 * The report exactly as it arrived. Occurrence-mode expansion happens in
+	 * here rather than at the call site, so a caller cannot forget it and
+	 * silently render the un-expanded shape.
+	 */
+	report: UnifiedReport | null;
+	screenshots: ScreenshotArtifact[];
+	status: ScanStatus;
+	/**
+	 * Already-resolved message for the failure state. The route decides what
+	 * counts as an error, because that is a question about how the report was
+	 * fetched, not about how it is displayed.
+	 */
+	error: string | null;
+	reportError?: string | null;
+	onRetryReport?: () => void;
+	/** Above the report header: job actions, export, verification or offline controls. */
+	toolbar: ReactNode;
+	/**
+	 * Between the header and the tabs: the baseline comparison, or null. It
+	 * follows the header so the site and its score come first.
+	 */
+	comparisonPanel: ReactNode;
+	/**
+	 * The artifacts tab's download list. A slot rather than a prop because a
+	 * live scan lists the files of a job that /demo does not have, and
+	 * inventing a synthetic job to satisfy the shape would emit links that 404.
+	 */
+	artifactsPanel: ReactNode;
+	/** Raw comparison findings; occurrence identities map to the displayed report. */
+	comparison?: ProjectDiff | null;
+	/** Optional override containing IDs from the expanded display report. */
+	newIssueIds?: ReadonlySet<string>;
+	onVerify?: (issue: IssueDetail) => void;
+}
+
+/*
+ * Everything about presenting a report, and nothing about obtaining one.
+ *
+ * The seam matters because the report viewer is the most substantial thing in
+ * this codebase and it used to be reachable only by starting a scan and
+ * waiting a minute and a half for it. The slots are required rather than
+ * optional: under exactOptionalPropertyTypes an optional ReactNode plus a
+ * possibly-null value is a type-error dance for nothing, and ReactNode already
+ * admits null.
+ *
+ * useSearchParams stays here. Which section is open, which issue is expanded
+ * and how the list is filtered are presentation, and both routes want the same
+ * deep links to work.
+ */
+export function ReportView({
+	sourceUrlMode = 'link',
+	jobId,
+	report,
+	screenshots,
+	status,
+	error,
+	reportError,
+	onRetryReport,
+	toolbar,
+	comparisonPanel,
+	artifactsPanel,
+	comparison,
+	newIssueIds,
+	onVerify
+}: ReportViewProps) {
+	const [routeParams, setSearchParams] = useSearchParams();
+	// /demo is prerendered without a query string. Reading it before hydration
+	// finishes would not match that HTML, and React would throw the page away.
+	const searchParams = useHydrated() ? routeParams : NO_QUERY;
+
+	const { displayReport, manualChecks, scoreModel } = useMemo(() => {
+		if (!report) return { displayReport: null, manualChecks: [], scoreModel: null };
+		const split = splitManualChecks(report);
+		return {
+			displayReport: buildOccurrenceModeReport(split.report),
+			manualChecks: split.manualChecks,
+			// The score counts findings as stored: not split per occurrence, and
+			// with any manual checks an older report filed as findings.
+			scoreModel: explainScore(report)
+		};
+	}, [report]);
+
+	const regressionIds = useMemo(() => {
+		if (newIssueIds) return newIssueIds;
+		const ids = new Set<string>();
+		for (const finding of comparison?.new ?? []) {
+			const occurrenceIds = new Set(
+				finding.occurrences?.map((occurrence) => occurrence.elementId).filter(Boolean) ?? []
+			);
+			for (const issue of displayReport?.issues ?? []) {
+				if (
+					occurrenceIds.size > 0
+						? issue.occurrences?.some(
+								(occurrence) => occurrence.elementId && occurrenceIds.has(occurrence.elementId)
+							)
+						: issue.id === finding.id
+				)
+					ids.add(issue.id);
+			}
+		}
+		return ids;
+	}, [newIssueIds, comparison, displayReport]);
+
+	const hasComparison = comparison != null || newIssueIds != null;
+	const onlyNew = hasComparison && searchParams.get('new') === '1';
+
+	const section: ReportSection = resolveSection(
+		searchParams.get('section'),
+		displayReport?.pages.length ?? 0
+	);
+	const activeScanner = searchParams.get('scanner');
+	const activeSeverity = searchParams.get('severity');
+	const activePage = searchParams.get('page');
+	const activeCategory = searchParams.get('category');
+	const searchQuery = searchParams.get('q') ?? '';
+	const rawSort = searchParams.get('sort');
+	const sortKey: IssueSortKey = isIssueSortKey(rawSort) ? rawSort : 'severity';
+	const groupByRule = searchParams.get('group') !== 'flat';
+	const activeIssueId = searchParams.get('issue');
+
+	const updateParams = useCallback(
+		(updates: Record<string, string | null>) => {
+			setSearchParams(
+				(prev) => {
+					const next = new URLSearchParams(prev);
+					for (const [key, value] of Object.entries(updates)) {
+						if (value === null || value === '') {
+							next.delete(key);
+						} else {
+							next.set(key, value);
+						}
+					}
+					return next;
+				},
+				{ replace: true, preventScrollReset: true }
+			);
+		},
+		[setSearchParams]
+	);
+
+	const setSection = useCallback(
+		(next: ReportSection) => {
+			updateParams({ section: next === 'review' ? null : next });
+		},
+		[updateParams]
+	);
+
+	const activeIssue = useMemo(() => {
+		if (!activeIssueId || !displayReport) return null;
+		return (
+			displayReport.issues.find(
+				(i) =>
+					i.id === activeIssueId ||
+					i.occurrences?.some((occurrence) => occurrence.elementId === activeIssueId)
+			) ?? null
+		);
+	}, [activeIssueId, displayReport]);
+
+	/* Human checks retain their separate review workflow. */
+	const { getVerdict } = useReviewVerdicts(jobId);
+	const reviewQueue = useMemo(
+		() =>
+			displayReport ? sortIssues(displayReport.issues.filter(needsHumanReview), 'severity') : [],
+		[displayReport]
+	);
+	const reviewProgress = useMemo(() => {
+		const reviewed = reviewQueue.filter((issue) => getVerdict(issue.id)?.verdict).length;
+		return { total: reviewQueue.length, reviewed, pending: reviewQueue.length - reviewed };
+	}, [reviewQueue, getVerdict]);
+	const nextReviewIssue =
+		reviewQueue.find((issue) => !getVerdict(issue.id)?.verdict) ?? reviewQueue[0] ?? null;
+	/* Report order is scanner-by-scanner, so the worst finding used to open as
+	   "78 of 84". Step through findings worst first, like the lists do. */
+	const issuesBySeverity = useMemo(
+		() => (displayReport ? sortIssues(displayReport.issues, 'severity') : []),
+		[displayReport]
+	);
+	const modalIssues =
+		section === 'review' && activeIssue && needsHumanReview(activeIssue)
+			? reviewQueue
+			: issuesBySeverity;
+
+	const activeIssuePage = useMemo(() => {
+		if (!activeIssue || !displayReport) return null;
+		return displayReport.pages.find((p) => p.id === activeIssue.pageId) ?? null;
+	}, [activeIssue, displayReport]);
+
+	return (
+		<main id="main" className="report">
+			<div className={section === 'review' ? 'wrap wrap--app wrap--wide' : 'wrap wrap--app'}>
+				{displayReport ? (
+					<>
+						{toolbar}
+						<ReportHeader
+							sourceUrlMode={sourceUrlMode}
+							report={displayReport}
+							scoreModel={scoreModel}
+							comparison={comparison}
+							reviewProgress={reviewProgress}
+							onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
+							onSelectScanner={(scannerId) =>
+								updateParams({ section: 'issues', scanner: scannerId })
+							}
+							onTriageSelect={(kind) => {
+								if (kind === 'review') updateParams({ section: null });
+								else updateParams({ section: 'issues' });
+							}}
+						/>
+						{comparisonPanel}
+						{displayReport.assessment && displayReport.assessment.expected > 0 && (
+							<section className="fix-first" aria-labelledby="expected-heading">
+								<h2 id="expected-heading">
+									Expected on staging ({displayReport.assessment.expected})
+								</h2>
+								<p>
+									These pages intentionally block indexing. Check their robots directives again
+									before production. Raw observations remain in All issues.
+								</p>
+								<button
+									className="btn btn--ghost"
+									type="button"
+									onClick={() => {
+										const issue = displayReport.issues.find(
+											(item) => displayReport.assessment?.dispositionByIssue[item.id] === 'expected'
+										);
+										if (issue) updateParams({ issue: issue.id });
+									}}
+								>
+									Inspect indexing evidence
+								</button>
+							</section>
+						)}
+						<ReportSectionNav
+							report={displayReport}
+							section={section}
+							onSectionChange={setSection}
+						/>
+
+						{section === 'review' && (
+							<section id="report-panel-review" role="tabpanel" aria-labelledby="report-tab-review">
+								{displayReport.summary.totalIssues === 0 &&
+									incompleteScanners(displayReport.scanners).length === 0 && (
+										<AllClearBanner report={displayReport} />
+									)}
+								<FixTheseFirst
+									issues={displayReport.issues.filter(
+										(issue) => displayReport.assessment?.dispositionByIssue[issue.id] !== 'expected'
+									)}
+									newIssueIds={regressionIds}
+									scoreModel={scoreModel}
+									pages={displayReport.pages}
+									screenshots={screenshots}
+									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+									<LighthouseSummary
+										categories={displayReport.summary.lighthouseCategories ?? []}
+									/>
+								)}
+								{reviewQueue.length > 0 && (
+									<div className="rnext rnext--secondary">
+										<div className="rnext__copy">
+											<p className="rnext__count">
+												{reviewProgress.pending === 0
+													? `All ${reviewQueue.length} findings reviewed`
+													: reviewProgress.reviewed > 0
+														? `${reviewProgress.pending} of ${reviewQueue.length} findings still need review`
+														: `${reviewQueue.length} findings need review`}
+											</p>
+											<p className="rnext__sub">
+												Highest severity first — evidence and decision tools open in place.
+											</p>
+										</div>
+										{nextReviewIssue && reviewProgress.pending > 0 && (
+											<button
+												type="button"
+												className="btn btn--ghost btn--sm"
+												onClick={() => updateParams({ issue: nextReviewIssue.id })}
+											>
+												{reviewProgress.reviewed > 0 ? 'Continue review' : 'Review human checks'}{' '}
+												<span className="ar" aria-hidden="true">
+													→
+												</span>
+											</button>
+										)}
+									</div>
+								)}
+								<VisualReviewPanel
+									report={displayReport}
+									screenshots={screenshots}
+									activeScanner={activeScanner}
+									activePage={activePage}
+									newIssueIds={regressionIds}
+									getReviewVerdict={getVerdict}
+									onSelectPage={(pageId) => updateParams({ page: pageId })}
+									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+							</section>
+						)}
+
+						{section === 'pages' && (
+							<section id="report-panel-pages" role="tabpanel" aria-labelledby="report-tab-pages">
+								<PagesView
+									report={displayReport}
+									screenshots={screenshots}
+									/* Straight into visual review for that page, which is the
+									   question the card was asked. */
+									onSelectPage={(pageId) => updateParams({ section: null, page: pageId })}
+								/>
+							</section>
+						)}
+
+						{section === 'issues' && (
+							<section id="report-panel-issues" role="tabpanel" aria-labelledby="report-tab-issues">
+								<IssuesView
+									report={displayReport}
+									newIssueIds={hasComparison ? regressionIds : undefined}
+									newOnly={onlyNew}
+									onNewOnlyChange={(enabled) => updateParams({ new: enabled ? '1' : null })}
+									activeScanner={activeScanner}
+									activeSeverity={activeSeverity}
+									activePage={activePage}
+									activeCategory={activeCategory}
+									searchQuery={searchQuery}
+									sortKey={sortKey}
+									groupByRule={groupByRule}
+									onScannerChange={(v) => updateParams({ scanner: v })}
+									onSeverityChange={(v) => updateParams({ severity: v })}
+									onPageChange={(v) => updateParams({ page: v })}
+									onCategoryChange={(v) => updateParams({ category: v })}
+									onSearchChange={(v) => updateParams({ q: v.trim() ? v : null })}
+									onSortChange={(v) => updateParams({ sort: v === 'severity' ? null : v })}
+									onGroupToggle={(v) => updateParams({ group: v ? null : 'flat' })}
+									onClear={() =>
+										updateParams({
+											scanner: null,
+											severity: null,
+											page: null,
+											category: null,
+											q: null,
+											new: null
+										})
+									}
+									getReviewVerdict={getVerdict}
+									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+								<ManualChecksPanel
+									checks={manualChecks}
+									pagesScanned={displayReport.pages.length}
+								/>
+							</section>
+						)}
+
+						{section === 'artifacts' && (
+							<section
+								id="report-panel-artifacts"
+								role="tabpanel"
+								aria-labelledby="report-tab-artifacts"
+								className="rsection-artifacts"
+							>
+								{artifactsPanel}
+								<ErrorsView errors={displayReport.errors} />
+							</section>
+						)}
+
+						{activeIssue && (
+							<IssueDetailModal
+								issue={activeIssue}
+								jobId={jobId}
+								page={activeIssuePage}
+								issues={modalIssues}
+								screenshots={screenshots}
+								{...(onVerify
+									? {
+											onVerify: () => {
+												updateParams({ issue: null });
+												onVerify(activeIssue);
+											}
+										}
+									: {})}
+								{...(onVerify
+									? {
+											verificationUnavailable: verificationUnavailableReason(
+												displayReport,
+												activeIssue
+											)
+										}
+									: {})}
+								onClose={() => updateParams({ issue: null })}
+								onNavigate={(issueId) => updateParams({ issue: issueId })}
+							/>
+						)}
+					</>
+				) : status === 'complete' && reportError ? (
+					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
+						<h2>Report unavailable</h2>
+						<p>{reportError}</p>
+						{onRetryReport && (
+							<button type="button" className="btn btn--primary" onClick={onRetryReport}>
+								Retry loading report
+							</button>
+						)}
+					</div>
+				) : status === 'failed' || status === 'error' ? (
+					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
+						<h2>Scan failed</h2>
+						<p>{error || 'The scan did not produce a report.'}</p>
+					</div>
+				) : status === 'cancelled' ? (
+					<div className="blankslate blankslate--framed rsection-placeholder" role="status">
+						<h2>Scan cancelled</h2>
+						<p>{error || 'This run was stopped before a report was produced.'}</p>
+					</div>
+				) : (
+					<div
+						className="blankslate blankslate--framed rsection-placeholder"
+						role="status"
+						aria-live="polite"
+					>
+						<Pill variant="queued">Loading</Pill>
+						<h2>{status === 'complete' ? 'Preparing report…' : 'Scan still running'}</h2>
+						<p>
+							{status === 'complete'
+								? 'Scan complete — aggregating report.'
+								: 'This report is not ready yet.'}
+						</p>
+					</div>
+				)}
+			</div>
+		</main>
+	);
+}

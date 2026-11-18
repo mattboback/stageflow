@@ -1,0 +1,464 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
+
+import {
+	discoverPages,
+	fetchScanners,
+	getDefaultScannerSelections,
+	submitScanJob,
+	type DiscoverPagesResponse
+} from '../api/client';
+import { getLocalProject, saveLocalProject, saveLocalRun } from '../local-project-store';
+import {
+	buildFormAuthConfig,
+	estimateScanRuntime,
+	isAuthConfigComplete,
+	mergePastedUrls,
+	validatePlaygroundConfiguration,
+	validateZipUploadFile,
+	type AuthFormConfig
+} from '../playground/playground-utils';
+import {
+	fingerprintProjectConfiguration,
+	type LocalProject,
+	type LocalProjectConfiguration
+} from '../projects';
+import type { ScannerDefinition, ScannerSelection } from '../types/scan';
+import { MAX_SCAN_PAGES, ZIP_UPLOAD_ENABLED } from '../scan-policy';
+import { normalizeUrlInput, validateHttpUrl } from '../url';
+
+export type PlaygroundMode = 'url' | 'zip';
+
+/** Alias kept so the extracted body below reads unchanged. */
+type Mode = PlaygroundMode;
+
+export interface PlaygroundSessionOptions {
+	projectId: string | null;
+	seedUrl: string | null;
+}
+
+// Selections follow the catalog: a stored ID the catalog no longer has is
+// dropped, and the next save forgets it.
+function mergeProjectSelections(
+	catalog: ScannerDefinition[],
+	stored: ScannerSelection[]
+): ScannerSelection[] {
+	if (stored.length === 0) return getDefaultScannerSelections(catalog);
+	const storedById = new Map(stored.map((selection) => [selection.id, selection]));
+	return catalog.map((scanner) => storedById.get(scanner.id) ?? { id: scanner.id, enabled: false });
+}
+
+/**
+ * All configure-page state: the scanner catalog, the target list, auth
+ * settings, local-project persistence, and submission.
+ *
+ * Extracted from routes/playground.tsx, where a single component held seventeen
+ * useState calls and roughly four hundred lines of JSX. The route now renders; this
+ * decides. Same pattern as useScanMonitor.
+ *
+ * The caller is responsible for keying the component on the project query so a
+ * project switch discards credentials and draft values — see the route.
+ */
+export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOptions) {
+	const navigate = useNavigate();
+
+	const [catalog, setCatalog] = useState<ScannerDefinition[]>([]);
+	const [selections, setSelections] = useState<ScannerSelection[]>([]);
+	const [catalogError, setCatalogError] = useState<string | null>(null);
+	const [catalogLoading, setCatalogLoading] = useState(true);
+	const [project, setProject] = useState<LocalProject | null>(null);
+	const [projectName, setProjectName] = useState('');
+	const [savingProject, setSavingProject] = useState(false);
+	const [projectNotice, setProjectNotice] = useState<string | null>(null);
+
+	const [mode, setMode] = useState<Mode>('url');
+	const [profile, setProfile] = useState<'production' | 'staging'>('production');
+	const [urls, setUrls] = useState<string[]>(() => {
+		return seedUrl ? [seedUrl, ''] : ['https://example.com', ''];
+	});
+	const [file, setFile] = useState<File | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const [error, setError] = useState<string | null>(null);
+	const [urlRowErrors, setUrlRowErrors] = useState<Record<number, string>>({});
+	const [submitting, setSubmitting] = useState(false);
+	const [discovering, setDiscovering] = useState(false);
+	const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
+	const [discoveryPreview, setDiscoveryPreview] = useState<{
+		result: DiscoverPagesResponse;
+		seed: string;
+	} | null>(null);
+
+	const [authConfig, setAuthConfig] = useState<AuthFormConfig>({
+		enabled: false,
+		loginUrl: '',
+		username: '',
+		password: '',
+		usernameSelector: '',
+		passwordSelector: '',
+		submitSelector: '',
+		successStrategy: 'auto',
+		successSelector: ''
+	});
+	const isAuthValid = isAuthConfigComplete(authConfig);
+
+	useEffect(() => {
+		const controller = new AbortController();
+		Promise.all([
+			fetchScanners(controller.signal),
+			projectId ? getLocalProject(projectId) : Promise.resolve(null)
+		])
+			.then(([res, storedProject]) => {
+				if (controller.signal.aborted) return;
+				setCatalog(res.scanners);
+				if (projectId && !storedProject) {
+					setProject(null);
+					setSelections(getDefaultScannerSelections(res.scanners));
+					setError('That local project was not found. It may have been deleted in this browser.');
+				} else if (storedProject) {
+					setProject(storedProject);
+					setProfile(storedProject.configuration.profile ?? 'production');
+					setProjectName(storedProject.name);
+					setMode('url');
+					setUrls([...storedProject.configuration.urls, '']);
+					setSelections(mergeProjectSelections(res.scanners, storedProject.configuration.scanners));
+				} else {
+					setSelections(getDefaultScannerSelections(res.scanners));
+				}
+				setCatalogError(null);
+			})
+			.catch((err: unknown) => {
+				if (controller.signal.aborted) return;
+				setCatalogError(err instanceof Error ? err.message : 'Failed to load scanners.');
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) setCatalogLoading(false);
+			});
+		return () => controller.abort();
+	}, [projectId]);
+
+	const enabledById = useMemo(() => {
+		const map = new Map<string, boolean>();
+		for (const s of selections) map.set(s.id, s.enabled);
+		return map;
+	}, [selections]);
+
+	const armed = selections.filter((s) => s.enabled).length;
+	const total = selections.length;
+
+	function toggleScanner(id: string) {
+		setSelections((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
+	}
+
+	function setAllScanners(enabled: boolean) {
+		setSelections((prev) => prev.map((s) => ({ ...s, enabled })));
+	}
+
+	function updateUrl(index: number, value: string) {
+		setUrls((prev) => prev.map((u, i) => (i === index ? value : u)));
+		setUrlRowErrors((prev) => {
+			if (!(index in prev)) return prev;
+			const next = { ...prev };
+			delete next[index];
+			return next;
+		});
+	}
+
+	/**
+	 * Spreads a pasted list (one URL per line, or space/comma separated) across
+	 * rows starting at `index`. Returns false for a single value so the browser
+	 * pastes it normally.
+	 */
+	function pasteUrls(index: number, text: string): boolean {
+		const next = mergePastedUrls(urls, index, text);
+		if (!next) return false;
+		if (next.length > MAX_SCAN_PAGES) {
+			setError(`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Paste a smaller list.`);
+			return true;
+		}
+
+		setUrls(next);
+		setUrlRowErrors({});
+		return true;
+	}
+
+	/** Replaces the first filled row with the pages found on that site, for the user to prune. */
+	async function discoverUrls() {
+		if (authConfig.enabled) {
+			setDiscoverNotice(
+				'Website discovery supports public pages only. Keep explicit URLs for authenticated scans.'
+			);
+			return;
+		}
+		const siteUrl = urls.find((value) => value.trim())?.trim();
+		if (!siteUrl) {
+			setUrlRowErrors({ 0: 'Enter the site URL to discover its pages' });
+			return;
+		}
+		const checked = validateHttpUrl(normalizeUrlInput(siteUrl) ?? siteUrl);
+		if (!checked.ok) {
+			setUrlRowErrors({ 0: checked.reason });
+			return;
+		}
+		setDiscovering(true);
+		setDiscoverNotice(null);
+		setDiscoveryPreview(null);
+		try {
+			const result = await discoverPages(checked.url);
+			setDiscoveryPreview({ result, seed: checked.url });
+		} catch (err) {
+			setDiscoverNotice(err instanceof Error ? err.message : 'Could not discover pages');
+		} finally {
+			setDiscovering(false);
+		}
+	}
+	function applyDiscoveredUrls(selected: string[]) {
+		if (!discoveryPreview) return;
+		const canonical = (value: string) => {
+			try {
+				return new URL(normalizeUrlInput(value) ?? value).href;
+			} catch {
+				return value.trim();
+			}
+		};
+		const seed = canonical(discoveryPreview.seed);
+		const manual = urls.filter((value) => value.trim() && canonical(value) !== seed);
+		const merged = [
+			...new Map([...selected, ...manual].map((value) => [canonical(value), value])).values()
+		];
+		if (merged.length > MAX_SCAN_PAGES) {
+			setDiscoverNotice(
+				`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Select fewer discovered pages or remove existing URLs.`
+			);
+			return;
+		}
+		setUrls(merged);
+		setUrlRowErrors({});
+		setDiscoveryPreview(null);
+		setDiscoverNotice(
+			`Added ${selected.length} selected pages. Existing manual URLs are preserved.`
+		);
+	}
+
+	function addUrlRow() {
+		if (urls.length >= MAX_SCAN_PAGES) {
+			setError(`A scan can contain at most ${MAX_SCAN_PAGES} URLs.`);
+			return;
+		}
+		setUrls((prev) => [...prev, '']);
+	}
+
+	function removeUrlRow(index: number) {
+		setUrls((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+		setUrlRowErrors({});
+	}
+
+	function onFilePicked(f: File | null) {
+		if (!f) {
+			setFile(null);
+			return;
+		}
+		const problem = validateZipUploadFile(f);
+		if (problem) {
+			setError(problem);
+			setFile(null);
+			return;
+		}
+		setError(null);
+		setFile(f);
+	}
+
+	function collectValidUrls(): { valid: string[]; rowErrors: Record<number, string> } {
+		const rowErrors: Record<number, string> = {};
+		const valid: string[] = [];
+		urls.forEach((raw, index) => {
+			const normalized = normalizeUrlInput(raw);
+			if (!normalized) return;
+			const result = validateHttpUrl(normalized);
+			if (result.ok) {
+				valid.push(result.url);
+			} else {
+				rowErrors[index] = result.reason;
+			}
+		});
+		return { valid, rowErrors };
+	}
+
+	function currentProjectConfiguration(
+		validUrls: string[],
+		scanners: ScannerSelection[]
+	): LocalProjectConfiguration {
+		return {
+			urls: validUrls,
+			scanners,
+			browser: 'chromium',
+			highlightStyle: 'solid',
+			...(profile === 'staging' ? { profile } : {})
+		};
+	}
+
+	async function saveProjectConfiguration() {
+		if (!project) return;
+		setProjectNotice(null);
+		setError(null);
+		const { valid, rowErrors } = collectValidUrls();
+		setUrlRowErrors(rowErrors);
+		if (Object.keys(rowErrors).length > 0) return;
+		if (valid.length === 0) {
+			setError('Enter at least one URL before saving this project.');
+			return;
+		}
+		if (!projectName.trim()) {
+			setError('Give this project a name before saving.');
+			return;
+		}
+
+		setSavingProject(true);
+		try {
+			const saved = await saveLocalProject({
+				...project,
+				name: projectName,
+				configuration: currentProjectConfiguration(valid, selections)
+			});
+			setProject(saved);
+			setProjectName(saved.name);
+			setProjectNotice('Project configuration saved locally.');
+		} catch (saveError) {
+			setError(saveError instanceof Error ? saveError.message : 'Could not save this project.');
+		} finally {
+			setSavingProject(false);
+		}
+	}
+
+	async function runScan() {
+		setError(null);
+		setUrlRowErrors(validation.urlRowErrors);
+		if (!validation.ready) {
+			setError(validation.error);
+			if (validation.focusId) {
+				requestAnimationFrame(() => document.getElementById(validation.focusId ?? '')?.focus());
+			}
+			return;
+		}
+
+		const validUrls = validation.validUrls;
+		const auth = mode === 'url' ? buildFormAuthConfig(authConfig) : null;
+		const scannersForSubmit = selections;
+
+		setSubmitting(true);
+		try {
+			let configFingerprint: string | null = null;
+			if (project) {
+				const configuration = currentProjectConfiguration(validUrls, scannersForSubmit);
+				const saved = await saveLocalProject({
+					...project,
+					name: projectName,
+					configuration
+				});
+				setProject(saved);
+				configFingerprint = await fingerprintProjectConfiguration(configuration);
+			}
+			const { job_id } = await submitScanJob({
+				mode,
+				file,
+				urls: validUrls,
+				scanners: scannersForSubmit,
+				profile,
+				auth
+			});
+			if (project && configFingerprint) {
+				try {
+					await saveLocalRun({
+						jobId: job_id,
+						projectId: project.id,
+						configFingerprint,
+						status: 'submitted',
+						createdAt: new Date().toISOString()
+					});
+				} catch {
+					// The scan is already running. Preserve project context in the URL so the
+					// report can still offer a recovery path if browser storage was exhausted.
+				}
+			}
+			const projectQuery = project ? `?project=${encodeURIComponent(project.id)}` : '';
+			void navigate(`/scan/${job_id}${projectQuery}`);
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
+			setSubmitting(false);
+		}
+	}
+
+	const targetCount = mode === 'url' ? urls.filter((u) => u.trim()).length : file ? 1 : 0;
+	const validation = validatePlaygroundConfiguration({
+		mode,
+		urls,
+		file,
+		selections,
+		auth: authConfig,
+		catalogLoading,
+		catalogError,
+		projectName: project ? projectName : undefined
+	});
+	const ready = validation.ready;
+	const readyDetail = validation.message;
+	const runtimeEstimate = estimateScanRuntime(catalog, selections, targetCount, mode);
+	return {
+		profile,
+		setProfile,
+		// Scanner catalog
+		catalog,
+		selections,
+		setSelections,
+		catalogError,
+		catalogLoading,
+		enabledById,
+		toggleScanner,
+		setAllScanners,
+		/** Enabled scanner count and catalog size, for the "3 of 7 armed" summary. */
+		armed,
+		total,
+
+		// Targets
+		mode,
+		setMode: (next: Mode) => {
+			if (next === 'url' || ZIP_UPLOAD_ENABLED) setMode(next);
+		},
+		urls,
+		updateUrl,
+		pasteUrls,
+		discoverUrls,
+		discovering,
+		discoverNotice,
+		discoveryPreview,
+		applyDiscoveredUrls,
+		cancelDiscovery: () => setDiscoveryPreview(null),
+		addUrlRow,
+		removeUrlRow,
+		targetCount,
+		file,
+		fileInputRef,
+		onFilePicked,
+
+		// Auth configuration
+		authConfig,
+		setAuthConfig,
+		isAuthValid,
+
+		// Local project
+		project,
+		projectName,
+		setProjectName,
+		savingProject,
+		projectNotice,
+		saveProjectConfiguration,
+
+		// Submission and validation
+		error,
+		urlRowErrors,
+		submitting,
+		runScan,
+		ready,
+		readyDetail,
+		runtimeEstimate
+	};
+}

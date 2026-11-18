@@ -1,0 +1,27 @@
+package api
+
+import (
+	"mime/multipart"
+	"testing"
+)
+
+func writeField(t *testing.T, w *multipart.Writer, key, value string) {
+	t.Helper()
+
+	if err := w.WriteField(key, value); err != nil {
+		t.Fatalf("write field %s: %v", key, err)
+	}
+}
+
+func addZipFile(t *testing.T, w *multipart.Writer, filename string, data []byte) {
+	t.Helper()
+
+	part, err := w.CreateFormFile("file", filename)
+	if err != nil {
+		t.Fatalf("create form file: %v", err)
+	}
+
+	if _, writeErr := part.Write(data); writeErr != nil {
+		t.Fatalf("write file: %v", writeErr)
+	}
+}

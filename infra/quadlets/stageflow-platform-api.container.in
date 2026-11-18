@@ -1,0 +1,39 @@
+[Unit]
+Description=StageFlow Platform API
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-postgres.service stageflow-orchestrator.service
+Requires=stageflow-postgres.service stageflow-orchestrator.service
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+TimeoutStartSec=900
+MemoryMax=768M
+
+[Container]
+Image=localhost/stageflow/platform-api:@IMAGE_TAG@
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+NoNewPrivileges=true
+ReadOnly=true
+Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
+User=65532
+Group=65532
+Environment=HOME=/tmp
+Volume=stageflow_data:/data
+Environment=PORT=8080
+Environment=PLATFORM_API_ALLOW_PRIVATE_TARGETS=false
+Environment=PLATFORM_API_MAX_PAGES=25
+Environment=PLATFORM_API_ZIP_UPLOAD_ENABLED=false
+# Configure PLATFORM_API_TRUSTED_PROXIES in the environment file for your proxy.
+
+HealthCmd=/usr/local/bin/platform-api-healthcheck
+HealthInterval=15s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Install]
+WantedBy=stageflow.target

@@ -1,0 +1,24 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[Makefile]
+indent_style = tab
+
+[*.go]
+indent_style = tab
+
+# Prettier owns these (see .prettierrc: useTabs) — keep editors in agreement so
+# new code is not written with spaces only to be converted on save.
+[*.{ts,tsx,js,mjs,cjs,json,css,scss,html}]
+indent_style = tab
+
+# YAML forbids tabs, and Prettier always emits spaces for Markdown and YAML
+# regardless of useTabs.
+[*.{md,yml,yaml}]
+indent_style = space
+indent_size = 2
